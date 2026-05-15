@@ -1,6 +1,6 @@
 import requests, json
 
-API_UTL = "http://127.0.0.1:8000"
+API_URL = "http://127.0.0.1:8000"
 USER_ID = None
 
 
@@ -9,14 +9,61 @@ def game():
     global USER_ID
     
     def get_user_hero():
-        response = requests.post(f"{API_UTL}/user/info", json={"id": USER_ID})
+        response = requests.post(f"{API_URL}/user/info", json={"id": USER_ID})
         data = response.json()
 
-        print(USER_ID)
-        print(data)
+        players = data["players"]
 
-        if len(data["players"]) > 0:
-            print(f"data {data}")
+        
+        if len(players) > 0:
+            max_size = 0
+            text = ""
+            
+            for index, player in enumerate(players):
+                size = (
+                f"nickname: {player["nickname"]}",
+                f"номер героя: {index + 1}",
+                f"id героя: {player["hero_id"]}",
+                f"уровнь игрока: {player["level"]}",
+                f"количество опыта игрока: {player["exp"]}",
+                )
+                s = len(max(size, key=len))
+                if s > max_size:
+                    max_size = s 
+
+            text_border =  "|" + ("=" * (max_size + 4)) + "|\n" 
+            
+
+            
+            for index, player in enumerate(players):
+                response_hero = requests.post(f"{API_URL}/hero/info", json={"id": player["hero_id"]})
+                hero_name = response.json()
+                print(hero_name)
+
+                text_nickname = f"nickname: {player["nickname"]}"
+                text_number = f"номер героя: {index + 1}"
+                text_hero_id = f"id героя: {player["hero_id"]}"
+                text_level = f"уровнь игрока: {player["level"]}"
+                text_exp = f"количество опыта игрока: {player["exp"]}"
+
+                text += text_border
+                
+                text += f"|%-{max_size + 4}s|" % text_nickname
+                text += "\n"
+                text += f"|%-{max_size + 4}s|" % text_number
+                text += "\n"
+
+                text += f"|%-{max_size + 4}s|" % text_hero_id
+                text += "\n"
+
+                text += f"|%-{max_size + 4}s|" % text_level
+                text += "\n"
+
+                text += f"|%-{max_size + 4}s|" % text_exp
+                text += "\n"
+                text += text_border
+
+            print(text)
 
         else:
             print("Нет персонажей")
@@ -25,7 +72,44 @@ def game():
 
 
     def create_player():
-        pass
+        response = requests.post(f"{API_URL}/player/hero/list")
+        data = response.json()
+        heroes = data["heroes"]
+        text = ""
+        max_name = 0
+
+        for hero in heroes:
+            text_name = f"название героя {hero["name"]}"
+            if len(text_name) > max_name:
+                max_name = len(text_name)
+
+
+        text_border ="|" + ("=" * (max_name + 4))+ "|\n"
+        text += text_border 
+        for index, hero in enumerate(heroes):
+            text_name = f"название героя {hero["name"]}"
+            text_number = f"номер героя {index + 1}"
+
+            text += f"|%-{max_name + 4}s|" % text_name
+            text += "\n"
+            text += f"|%-{max_name + 4}s|" % text_number
+            text += "\n"
+            text += text_border
+            
+        choise = int(input(text + "\nВыбор номера: ")) - 1
+        
+        hero_id = heroes[choise]["id"]
+        nickname = input("Введите nickname вашего персонажа: ")
+        data = {
+            "nickname" : nickname,
+            "hero_id" : hero_id,
+            "user_id" : USER_ID
+        }
+
+        response = requests.post(f"{API_URL}/player/create", json=data)
+        if response.status_code == 201:
+            print(f"Ваш персонаж {nickname} : {heroes[choise]["name"]} успено создан")
+
 
     while True:
         text = """
@@ -38,7 +122,7 @@ def game():
         if choise == 1:
             get_user_hero()
         elif choise == 2:
-            exit()
+            create_player()
 
 
 
@@ -47,7 +131,7 @@ def game():
 def login():
     global USER_ID
     username = input("введите usenname: ").strip()
-    response = requests.post(f"{API_UTL}/user/login", json={"username": username})
+    response = requests.post(f"{API_URL}/user/login", json={"username": username})
     if (response.status_code == 200):
         data = response.json()
         USER_ID = data["id"]
@@ -58,7 +142,7 @@ def login():
 def register():
     username = input("Введите имя: ").strip()
     data = {"username": username}
-    response = requests.post(f"{API_UTL}/user/register", json=data)
+    response = requests.post(f"{API_URL}/user/register", json=data)
     print(response.content)
 
     if (response.status_code == 201):

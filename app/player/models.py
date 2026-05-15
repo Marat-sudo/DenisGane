@@ -12,7 +12,7 @@ class PlayerModel(Base):
     hero_id:Mapped[int] = mapped_column(ForeignKey("heros.id"),nullable=False)
     level: Mapped[int] = mapped_column(default=1)
     exp: Mapped[int] = mapped_column(default=0)
-    nickname:Mapped[str] =mapped_column(unique=True,nullable=False)
+    nickname:Mapped[str] = mapped_column(unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
 
     users : Mapped[List["UserModel"]] = relationship("UserModel", back_populates="players")

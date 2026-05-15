@@ -78,7 +78,7 @@ async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/create", response_model=ReadPlayer)
+@router.post("/create", response_model=ReadPlayer, status_code=201)
 async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
 
     new_player = PlayerModel(
