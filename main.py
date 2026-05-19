@@ -7,6 +7,7 @@ from app.player.models import *
 from app.user.view import router as user_router
 from app.player.view import router as player_router
 from app.locations.view import router as locations_router
+from app.fight.view import router as fight_router
 
 app = FastAPI(
     title="game"
@@ -24,3 +25,5 @@ app.include_router(user_router)
 app.include_router(player_router)
 
 app.include_router(locations_router)
+
+app.include_router(fight_router)

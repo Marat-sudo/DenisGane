@@ -18,9 +18,12 @@ async def register_hero(data: Hero, db: AsyncSession = Depends(get_db)):
     # await db.flush()
     await db.commit()
     await db.refresh(new_hero)
-    
+    result = await db.execute(select(HeroModel)
+                              .where(HeroModel.id == new_hero.id)
+                              .options(selectinload(HeroModel.skills)))
+    hero = result.scalar_one_or_none()
     # return dict(new_user)
-    raise HTTPException(status_code=201, detail=dict(data))
+    return hero
     
 
 
@@ -81,6 +84,8 @@ async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/create", response_model=ReadPlayer, status_code=201)
 async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
 
+    # INSERT INTO player (nickname, hero_id, user_id)
+    #VALUES ("илья", 2, 4)
     new_player = PlayerModel(
         nickname=data.nickname, 
         hero_id=data.hero_id, 
@@ -90,10 +95,16 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_player)
     
-    result = await db.execute(select(HeroModel).where(HeroModel.id == new_player.hero_id).options(selectinload(HeroModel.skills)))
+    # SELECT id, name, skills, players FROM heros WHERE id == 3 
+    result = await db.execute(select(HeroModel)
+                              .where(HeroModel.id == new_player.hero_id)
+                              .options(selectinload(HeroModel.skills)))
     hero = result.scalar_one_or_none()
 
     for skill in hero.skills:
+        #INSERT INTO playerandskills (player_id, skill_id)
+        #VALUES (1, 2)
+
         new_ps = playerAndSkill(player_id = new_player.id, skill_id = skill.id)
         db.add(new_ps)
         await db.commit()
