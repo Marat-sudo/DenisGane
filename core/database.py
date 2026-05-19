@@ -1,6 +1,33 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from pydantic_settings import BaseSettings
+import hashlib, os
+
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+
+    hashed = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("UTF-8"),
+        salt    
+    )
+
+    return f"{hashed}${hashed.hex()}"
+
+def het_hashed_password(hash_password: str, passwrod: str) -> bool:
+    try:
+        salt_hex, hash_hex = passwrod.split("$")
+        salt = bytes.fromhex(salt_hex)
+
+        hashed = hashlib.pbkdf2_hmac(
+            "sha256",
+            hash_password.encode("UTF-8"),
+            salt,
+            10000
+        )
+        return hashed.hex == hash_hex
+    except:
+        return False
 
 
 class Settings(BaseSettings):
