@@ -22,7 +22,7 @@ class ReadHero(Hero):
         orm_mode = True
 
 class HeroList(BaseModel):
-    heroes: List[ChoiceHero]
+    heroes: list[ChoiceHero]
     
 
 class Skills(BaseModel):

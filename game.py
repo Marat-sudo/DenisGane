@@ -2,7 +2,7 @@ import requests, json
 
 API_URL = "http://127.0.0.1:8000"
 USER_ID = None
-
+PLAYER_ID = None
 
 
 def game():
@@ -36,9 +36,9 @@ def game():
 
             
             for index, player in enumerate(players):
-                response_hero = requests.post(f"{API_URL}/hero/info", json={"id": player["hero_id"]})
-                hero_name = response.json()
-                print(hero_name)
+                # response_hero = requests.post(f"{API_URL}/hero/info", json={"id": player["hero_id"]})
+                # hero_name = response.json()
+                # print(hero_name)
 
                 text_nickname = f"nickname: {player["nickname"]}"
                 text_number = f"номер героя: {index + 1}"
@@ -96,7 +96,7 @@ def game():
             text += "\n"
             text += text_border
             
-        choise = int(input(text + "\nВыбор номера: ")) - 1
+        choise = int(input(text + "\nВыбор номера героя: ")) - 1
         
         hero_id = heroes[choise]["id"]
         nickname = input("Введите nickname вашего персонажа: ")
@@ -111,11 +111,37 @@ def game():
             print(f"Ваш персонаж {nickname} : {heroes[choise]["name"]} успено создан")
 
 
+    
+    def start_fight():
+        get_user_hero()
+        choise_id = int(input("выберите своего героя из спика: "))
+        PLAYER_ID = choise_id
+
+
+        data = requests.post(f"{API_URL}/locations/list")
+        
+        print(data.json())
+
+        choise_loc = int(input("выберите локацию: "))
+
+        
+
+        response = requests.post(f"{API_URL}/player/update?id={PLAYER_ID}&loc_id={choise_loc}")
+
+
+        # print(PLAYER_ID)
+        # response = requests.post(f"{API_URL}/fight/start?attacker_id={PLAYER_ID}")
+        # data = response.json()
+        # print(data)
+
+
+
     while True:
         text = """
         1. Просмотр персонажей;
         2. Создать персонажей;
         3. Мой профиль
+        4. отправитсья в бой
         0. Выйти.
         """
         choise = int(input(f"{text}\n Выбор: "))
@@ -123,25 +149,32 @@ def game():
             get_user_hero()
         elif choise == 2:
             create_player()
+        elif choise == 4:
+            start_fight()
 
 
-
-    
 
 def login():
     global USER_ID
     username = input("введите usenname: ").strip()
-    response = requests.post(f"{API_URL}/user/login", json={"username": username})
+    password = input("введите password: ").strip()
+
+
+
+    response = requests.post(f"{API_URL}/user/login", json={"username": username, "password": password})
     if (response.status_code == 200):
         data = response.json()
         USER_ID = data["id"]
         print(USER_ID)
         game()
-    
+
+    else:
+        print(response.content)
     
 def register():
     username = input("Введите имя: ").strip()
-    data = {"username": username}
+    password = input("Введите пароль: ").strip()
+    data = {"username": username, "password": password}
     response = requests.post(f"{API_URL}/user/register", json=data)
     print(response.content)
 

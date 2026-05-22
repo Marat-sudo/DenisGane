@@ -1,12 +1,14 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional,List
+
 
 class LocationsBase(BaseModel):
     name: str
     min_level: int
     didescription: str
-
+    class Config:
+        from_attributes=True
 class CreateLocation(LocationsBase):
     pass
 
@@ -14,6 +16,7 @@ class UpdateLocation(LocationsBase):
     pass
 
 class ReadLocation(LocationsBase):
+    id: int
     pass
 
 class CreateProduct(LocationsBase):
@@ -22,6 +25,10 @@ class CreateProduct(LocationsBase):
 
 class CreateStore(LocationsBase):
     pass
+
+class LocationList(BaseModel):
+    locations: List[ReadLocation]
+    
 
 class Products(BaseModel):
     store_id: int

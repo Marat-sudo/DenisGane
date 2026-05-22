@@ -7,13 +7,15 @@ from core.database import get_db
 from .models import *
 from .shemas import (
     Products,
+    LocationsBase,
     CreateLocation,
     ReadLocation,
     CreateStore,
     ReadStore,
     CreateProduct,
     ReadProducts,
-    UpdateLocation
+    UpdateLocation,
+    LocationList
 )
     
 
@@ -42,7 +44,7 @@ async def info_Locations(id: int, db: AsyncSession = Depends(get_db)):
     locations = result.scalar_one_or_none()
 
     if locations is None:
-        raise HTTPException(statuc=404, detail="Location now found")
+        raise HTTPException(statuc=404, detail="Location not found")
 
     return locations
 
@@ -60,6 +62,15 @@ async def update_locations(id: int, data:ReadLocation, db: AsyncSession = Depend
     await db.refresh(locations)
 
     return locations
+
+
+@router.post("/list", response_model=LocationList)
+async def locations_list(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(LocationsModel))
+    locations = result.scalars().all()
+    print("*" * 100)
+    print(locations)
+    return LocationList(locations=locations)
 
 @router.delete("/delete")
 async def delete_Locations(id: int, db: AsyncSession = Depends(get_db)):
@@ -158,6 +169,8 @@ async def update_store(id: int, data:ReadStore, db: AsyncSession = Depends(get_d
     await db.refresh(store)
 
     return store
+
+
 
 @router.delete("/store/delete")
 async def delete_store(id: int, db: AsyncSession = Depends(get_db)):

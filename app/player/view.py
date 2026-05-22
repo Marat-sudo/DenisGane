@@ -5,6 +5,7 @@ from typing import List
 from sqlalchemy.orm import selectinload
 
 from core.database import get_db
+from app.locations.models import LocationsModel
 from .models import *
 from .shemas import *
 
@@ -35,16 +36,11 @@ async def info_hero(id: int, db: AsyncSession = Depends(get_db)):
     return hero
 
 
-@router.post("/hero/list", response_model=HeroList, tags=["hero"])
-async def hero_list(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(HeroModel).where())
-    heroes = result.scalars().all()
 
-    return HeroList(heroes=heroes)
 
 
 @router.delete("/hero/delete", tags=['hero'])
-async def delete_hero(id: int, db: AsyncSession = Depends(get_db)):
+async def delete_hero(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(HeroModel).where(HeroModel.id == id)) 
     hero = result.scalar_one_or_none()
     await db.delete(hero)
@@ -84,12 +80,18 @@ async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/create", response_model=ReadPlayer, status_code=201)
 async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
 
+    min_loc = await db.execute(select(LocationsModel)
+                              .where(LocationsModel.min_level == 0))
+
+    loc = min_loc.scalar_one_or_none()
+
     # INSERT INTO player (nickname, hero_id, user_id)
     #VALUES ("илья", 2, 4)
     new_player = PlayerModel(
         nickname=data.nickname, 
         hero_id=data.hero_id, 
-        user_id=data.user_id)
+        user_id=data.user_id,
+        locations_id = loc.id)
     
     db.add(new_player)
     await db.commit()
@@ -113,7 +115,28 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
     return new_player
 
 
+@router.put("/update", response_model=ReadPlayer)
+async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id)) 
+    player = result.scalar_one_or_none()
+
+    player.locations_id = loc_id
+
+    await db.commit()
+    await db.refresh(player)
+
+    return player
+
+
 @router.post("/info", response_model=ReadPlayer)
+async def info_player(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
+    player = result.scalar('user_or_none')
+
+    return player
+
+
+@router.post("choiseLocations", response_model=ReadPlayer)
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
     player = result.scalar('user_or_none')

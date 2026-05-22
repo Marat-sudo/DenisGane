@@ -4,8 +4,10 @@ from datetime import datetime
 from core.database import Base
 from typing import List
 
+
+
 class PlayerModel(Base):
-    __tablename__ = "player"
+    __tablename__ = "players"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id:Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
@@ -14,7 +16,9 @@ class PlayerModel(Base):
     exp: Mapped[int] = mapped_column(default=0)
     nickname:Mapped[str] = mapped_column(unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
-
+    locations_id:Mapped[int] = mapped_column(ForeignKey("locations.id"),nullable=False)
+    
+    locations: Mapped["LocationsModel"] = relationship("LocationsModel", back_populates="players")
     users : Mapped[List["UserModel"]] = relationship("UserModel", back_populates="players")
     hero : Mapped[List["HeroModel"]] = relationship("HeroModel", back_populates="players")
 
@@ -52,6 +56,6 @@ class SkillModel(Base):
 class playerAndSkill(Base):
     __tablename__="playerandskills"
     id: Mapped[int]  = mapped_column(primary_key=True, autoincrement=True)
-    player_id: Mapped[int] = mapped_column(ForeignKey("player.id"), nullable=False)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), nullable=False)
     level: Mapped[int] = mapped_column(default=1)

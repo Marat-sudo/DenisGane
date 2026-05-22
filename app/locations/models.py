@@ -10,6 +10,8 @@ class LocationsModel(Base):
     name:Mapped[str] = mapped_column(unique=True, nullable=False)
     min_level: Mapped[int] = mapped_column(default=1)
     didescription:Mapped[str] = mapped_column(nullable=False)
+
+    players : Mapped[list["PlayerModel"]] = relationship("PlayerModel", back_populates="locations")
     
 
     

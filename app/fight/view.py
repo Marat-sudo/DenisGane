@@ -14,7 +14,7 @@ from .shemas import *
 router = APIRouter(prefix="/fight", tags=['fight'])
 
 
-@router.post("/fight/start", tags=['fight'])
+@router.post("/start", tags=['fight'])
 async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == attacker_id)) 
     attacker = result.scalar_one_or_none()

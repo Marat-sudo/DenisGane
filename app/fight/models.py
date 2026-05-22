@@ -9,7 +9,7 @@ class FightModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     fight: Mapped[datetime] = mapped_column(default=datetime.now)
 
-    winner_id:Mapped[int] = mapped_column(ForeignKey("player.id"),nullable=False)
-    loser_id:Mapped[int] = mapped_column(ForeignKey("player.id"),nullable=False)
+    winner_id:Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
+    loser_id:Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
 
    

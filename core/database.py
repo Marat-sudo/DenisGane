@@ -9,12 +9,13 @@ def hash_password(password: str) -> str:
     hashed = hashlib.pbkdf2_hmac(
         "sha256",
         password.encode("UTF-8"),
-        salt    
+        salt,
+        10000
     )
 
-    return f"{hashed}${hashed.hex()}"
+    return f"{salt.hex()}${hashed.hex()}"
 
-def het_hashed_password(hash_password: str, passwrod: str) -> bool:
+def get_hashed_password(hash_password: str, passwrod: str) -> bool:
     try:
         salt_hex, hash_hex = passwrod.split("$")
         salt = bytes.fromhex(salt_hex)
@@ -25,7 +26,7 @@ def het_hashed_password(hash_password: str, passwrod: str) -> bool:
             salt,
             10000
         )
-        return hashed.hex == hash_hex
+        return hashed.hex() == hash_hex
     except:
         return False
 

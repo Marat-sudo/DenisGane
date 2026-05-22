@@ -8,6 +8,7 @@ class User(BaseModel):
     
 
 class CreateUser(User):
+    password: str
     pass
 
 class ReadUser(User):
@@ -21,6 +22,9 @@ class LoginUser(User):
     id: int
     t_id: Optional[int] = None
     
+class LogInUser(User):
+    username: str
+    password: str
 
 
 class UpdateUser(BaseModel):

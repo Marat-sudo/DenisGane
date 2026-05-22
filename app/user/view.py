@@ -4,7 +4,7 @@ from sqlalchemy import select, desc, func, and_, or_
 from typing import List
 from sqlalchemy.orm import selectinload
 
-from core.database import get_db
+from core.database import get_db, hash_password, get_hashed_password
 from .models import *
 from .shemas import *
 
@@ -13,9 +13,9 @@ router = APIRouter(prefix="/user", tags=['users'])
 
 @router.post("/register", response_model=LoginUser, status_code=201)
 async def register_user(data: CreateUser, db: AsyncSession = Depends(get_db)):
-    
-    
-    new_user = UserModel(username=data.username)
+    create_passwrod = hash_password(data.password)
+    new_user = UserModel(username=data.username,
+                         password=create_passwrod)
     db.add(new_user)
     # await db.flush()
     await db.commit()
@@ -39,7 +39,7 @@ async def info_user(data: SearchUser, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=LoginUser)
-async def login(data: User, db: AsyncSession = Depends(get_db)):
+async def login(data: LogInUser, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(UserModel)
         .where(UserModel.username == data.username)
@@ -47,8 +47,13 @@ async def login(data: User, db: AsyncSession = Depends(get_db)):
     
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=403, detail="неверный логие или пароль")
+        raise HTTPException(status_code=403, detail="Error: 1")
     
+    verify_password = get_hashed_password(data.password, user.password)
+
+    if not verify_password:
+        raise HTTPException(status_code=403, detail="Error: 2")
+
     return user
 
 @router.delete("/delete")
