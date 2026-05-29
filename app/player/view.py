@@ -36,6 +36,14 @@ async def info_hero(id: int, db: AsyncSession = Depends(get_db)):
     return hero
 
 
+@router.post("/hero/list",  response_model=HeroList, tags=['hero'])
+async def hero_list(db: AsyncSession = Depends(get_db)):
+    # SELECT id, name FROM heros;
+    result = await db.execute(select(HeroModel))
+    heroes = result.scalars().all()
+
+    return HeroList(heroes=heroes)
+
 
 
 
@@ -136,7 +144,7 @@ async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     return player
 
 
-@router.post("choiseLocations", response_model=ReadPlayer)
+@router.post("/choiseLocations", response_model=ReadPlayer)
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
     player = result.scalar('user_or_none')

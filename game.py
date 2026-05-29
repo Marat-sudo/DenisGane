@@ -1,9 +1,14 @@
 import requests, json
+from rich import print
+from rich.console import Console
+from rich.table import Table
+
+from rich.panel import Panel
 
 API_URL = "http://127.0.0.1:8000"
 USER_ID = None
 PLAYER_ID = None
-
+console = Console()
 
 def game():
     global USER_ID
@@ -118,23 +123,81 @@ def game():
         PLAYER_ID = choise_id
 
 
-        data = requests.post(f"{API_URL}/locations/list")
-        
-        print(data.json())
+        response = requests.post(f"{API_URL}/locations/list")
+        data = response.json()
+        table = Table(title="локации")
 
+        table.add_column("название")
+        table.add_column("описание")
+        table.add_column("минимальный уровень")
+        table.add_column("номер")
+
+        print(data)
+        for loc in data["locations"]:
+            table.add_row(loc["name"], loc["didescription"], str(loc["min_level"]), str(loc["id"]))
+
+        print(table)
         choise_loc = int(input("выберите локацию: "))
 
         
+      
 
         response = requests.post(f"{API_URL}/player/update?id={PLAYER_ID}&loc_id={choise_loc}")
 
 
-        # print(PLAYER_ID)
-        # response = requests.post(f"{API_URL}/fight/start?attacker_id={PLAYER_ID}")
-        # data = response.json()
+        print(PLAYER_ID)
+        response = requests.post(f"{API_URL}/fight/start?attacker_id={PLAYER_ID}")
+        data = response.json()
+
+        if data["detail"]["winner"]["id"] == PLAYER_ID:
+            title = "[green][bold]Выигрыш[/bold][/green]"
+            color = "green"
+        else:
+            title = "[red][bold]Проигрыш[/bold][/red]"
+            color = "red"
+
+        detail = data["detail"]
+        mes = f"""
+        attacker: {detail["attacker"]["nickname"]} {detail["attacker"]["level"]}
+        opponent: {detail["opponent"]["nickname"]} {detail["opponent"]["level"]}
+        message: {detail["message"]}
+        """
+        res = Panel(mes, title=title, border_style=color)
         # print(data)
+        print(res)
+        
 
+    def user_statistics():
+        get_user_hero()
+        choise_id = int(input("выберите своего героя из спика: "))
+        PLAYER_ID = choise_id
 
+        response = requests.post(f"{API_URL}/fight/userList?id={PLAYER_ID}")
+        data = response.json()
+        data = data["fights"]
+
+        table = Table(title="[bold]статистика", show_lines=True)
+
+        table.add_column("[green]айди победителя[/green]")
+        table.add_column("[red]айди проиграшего[/red]")
+        table.add_column("[cyan]дата[/cyan]")
+
+        win_count = 0
+        los_count = 0
+        for fight in data:
+            if fight["winner_id"] == PLAYER_ID:
+                table.add_row(str(fight["winner_id"]), str(fight["loser_id"]), str(fight["fight"]), style="green")
+                win_count += 1
+            else:
+                table.add_row(str(fight["winner_id"]), str(fight["loser_id"]), str(fight["fight"]), style="red")
+                los_count += 1
+        print("\n")
+        print(table)
+
+        print("[bolt]ИТОГ")
+        print(f"[green]{win_count} побед")
+        print(f"[red]{los_count} поражений")
+        print(f"[magenta]в процентах {(win_count / (win_count + los_count)) * 100}%")
 
     while True:
         text = """
@@ -142,6 +205,7 @@ def game():
         2. Создать персонажей;
         3. Мой профиль
         4. отправитсья в бой
+        5. статистика
         0. Выйти.
         """
         choise = int(input(f"{text}\n Выбор: "))
@@ -151,6 +215,8 @@ def game():
             create_player()
         elif choise == 4:
             start_fight()
+        elif choise == 5:
+            user_statistics()
 
 
 

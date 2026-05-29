@@ -68,8 +68,6 @@ async def update_locations(id: int, data:ReadLocation, db: AsyncSession = Depend
 async def locations_list(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LocationsModel))
     locations = result.scalars().all()
-    print("*" * 100)
-    print(locations)
     return LocationList(locations=locations)
 
 @router.delete("/delete")

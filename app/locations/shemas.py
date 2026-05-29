@@ -9,6 +9,33 @@ class LocationsBase(BaseModel):
     didescription: str
     class Config:
         from_attributes=True
+
+
+class LocationList(BaseModel):
+    locations: List[ReadLocation]
+    
+
+class Products(BaseModel):
+    store_id: int
+    name: str
+    didescription: str
+    attributes: str
+
+class StoreBase(BaseModel):
+    name: str
+    didescription: str
+    location_id: int
+
+class ReadLocations(LocationsBase):
+    id: int
+
+
+class ReadProducts(Products):
+    id: int
+
+class ReadStore(StoreBase):
+    id: int
+
 class CreateLocation(LocationsBase):
     pass
 
@@ -26,31 +53,6 @@ class CreateProduct(LocationsBase):
 class CreateStore(LocationsBase):
     pass
 
-class LocationList(BaseModel):
-    locations: List[ReadLocation]
-    
 
-class Products(BaseModel):
-    store_id: int
-    name: str
-    didescription: str
-    attributes: str
-
-class StoreBase(BaseModel):
-    name: str
-    didescription: str
-    location_id: int
-
-
-
-class ReadLocations(LocationsBase):
-    id: int
-
-
-class ReadProducts(Products):
-    id: int
-
-class ReadStore(StoreBase):
-    id: int
 
 

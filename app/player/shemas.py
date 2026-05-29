@@ -19,7 +19,7 @@ class ReadHero(Hero):
     id: int
     skills: List["ReadSkills"]
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class HeroList(BaseModel):
     heroes: list[ChoiceHero]

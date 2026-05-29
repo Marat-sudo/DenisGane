@@ -57,3 +57,14 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
 
 
     return HTTPException(status_code=200, detail=win)
+
+
+@router.post("/userList", response_model=ListFights)
+async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightModel)
+                              .where(
+                                   ( FightModel.winner_id == id) |
+                                    (FightModel.loser_id == id)))
+    fights_ = result.scalars().all()
+
+    return ListFights(fights=fights_)
