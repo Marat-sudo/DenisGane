@@ -18,13 +18,13 @@ class FightSession(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
-    attacker_id: Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
-    opponent_id: Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
+    attacker_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
+    opponent_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
 
     attacker_current_hp: Mapped[int] = mapped_column(nullable=False)
     opponent_current_hp: Mapped[int] = mapped_column(nullable=False)
 
-    winner_id: Mapped[int]
+    winner_id: Mapped[int] = mapped_column(nullable=True, default=None)
 
     current_turn: Mapped[int] = mapped_column(default=1)
     attacker_turn: Mapped[bool] = mapped_column(default=True)

@@ -27,36 +27,20 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     opponent = random.choice(players)
 
 
-
-    player1 = Fight_player(id = attacker.id, nickname = attacker.nickname, level=attacker.level)
-    player2 = Fight_player(id = opponent.id, nickname = opponent.nickname, level=opponent.level)
-    
-   
-
-    if random.random() < 0.5 : 
-        win_player = player1
-        loser = player2
+    session = FightSession(
+        attacker_id = attacker.id,
+        opponent_id = opponent.id,
+        attacker_current_hp = attacker.max_hp,
+        opponent_current_hp = opponent.max_hp
+    )
 
 
-    else: 
-        
-        win_player = player2
-        loser = player1
-
-    res = FightModel(winner_id=win_player.id, loser_id=loser.id)
-    db.add(res)
+    db.add(session)
     await db.commit()
-    await db.refresh(res)
+    await db.refresh(session)
 
-    win = FightResult(fight_id=res.id, 
-                        attacker=player1, 
-                        opponent=player2, 
-                        winner=win_player, 
-                        message=f"игрок с уровнем: {win_player.level} {win_player.nickname} победил игрока {loser.nickname} с уровнем {loser.level}")
-
-
-
-    return HTTPException(status_code=200, detail=win)
+    
+    return HTTPException(status_code=200, detail=session)
 
 
 @router.post("/userList", response_model=ListFights)
@@ -68,3 +52,121 @@ async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     fights_ = result.scalars().all()
 
     return ListFights(fights=fights_)
+
+
+
+@router.post("/turn")
+async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightSession)
+                              .where(FightSession.id == session_id))
+    session = result.scalar_one_or_none()
+
+
+    res = await db.execute(select(PlayerModel)
+                              .where(PlayerModel.id == session.opponent_id))
+    opponent = res.scalar_one_or_none()
+
+    res = await db.execute(select(PlayerModel)
+                              .where(PlayerModel.id == session.attacker_id))
+    attacker  = res.scalar_one_or_none()
+
+    if session.attacker_turn:
+        damage = attacker.attack - opponent.defense
+
+        if damage < 0:
+                damage = 1
+            
+        newHP = session.opponent_current_hp - damage
+
+        if newHP <= 0:
+            session.opponent_current_hp = 0
+            session.status = "finish"
+            session.winner_id = attacker.id
+
+
+        else:
+            session.opponent_current_hp = newHP
+
+            
+
+            log = createLog(attacker, 
+                            opponent, 
+                            session, 
+                            damage, 
+                            newHP,
+                            session.attacker_current_hp)
+       
+            session.current_turn += 1
+            session.attacker_turn = not session.attacker_turn
+        
+
+    # атакует оппонент
+    else:
+        
+
+        damage = opponent.attack - attacker.defense
+
+        if damage < 0:
+                damage = 1
+            
+        newHP = session.attacker_current_hp - damage
+
+        if newHP <= 0:
+            session.attacker_current_hp = 0
+
+            session.status = "finish"
+            session.winner_id = opponent.id
+
+        else:
+
+            session.attacker_current_hp = newHP
+
+            log = createLog(opponent, 
+                            attacker, 
+                            session, 
+                            damage, 
+                            newHP, 
+                            session.opponent_current_hp)
+            
+            session.current_turn += 1
+            session.attacker_turn = not session.attacker_turn
+
+    db.add(log)
+    await db.commit()
+    await db.refresh(session)
+    await db.refresh(log)
+
+    return log
+
+
+    
+
+def createLog(
+        attack: PlayerModel, 
+        defender: PlayerModel,
+        session: FightSession,
+        damage: int,
+        defHp: int,
+        attHp: int) -> FightLog:
+    
+    _log = FightLog(
+        fight_session_id = session.id,
+        turn_number = session.current_turn,
+        attacker_id = attack.id, 
+        defender_id = defender.id,
+        damage_dealt = damage,
+
+        action_type = "attack",
+        description = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона до {defHp} HP"
+        )
+    return _log
+
+    
+
+
+
+    
+
+
+
+    

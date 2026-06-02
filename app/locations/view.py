@@ -50,7 +50,7 @@ async def info_Locations(id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/update", response_model=ReadLocation)
-async def update_locations(id: int, data:ReadLocation, db: AsyncSession = Depends(get_db)):
+async def update_locations(id: int, data:UpdateLocation, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LocationsModel).where(LocationsModel.id == id)) 
     locations = result.scalar_one_or_none()
 
