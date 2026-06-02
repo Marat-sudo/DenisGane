@@ -17,6 +17,16 @@ class PlayerModel(Base):
     nickname:Mapped[str] = mapped_column(unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     locations_id:Mapped[int] = mapped_column(ForeignKey("locations.id"),nullable=False)
+
+
+    max_hp: Mapped[int] = mapped_column(nullable=False)
+    attack: Mapped[int] = mapped_column(nullable=False)
+    defense: Mapped[int] = mapped_column(nullable=False)
+    agility: Mapped[int] = mapped_column(nullable=False)
+    crit_chance: Mapped[float] = mapped_column(default=5.0)
+
+
+
     
     locations: Mapped["LocationsModel"] = relationship("LocationsModel", back_populates="players")
     users : Mapped[List["UserModel"]] = relationship("UserModel", back_populates="players")
@@ -33,6 +43,12 @@ class HeroModel(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
     name: Mapped[str]
+
+    base_hp: Mapped[int] = mapped_column(nullable=False)
+    base_attack: Mapped[int] = mapped_column(nullable=False)
+    base_defense: Mapped[int] = mapped_column(nullable=False)
+    base_agility: Mapped[int] = mapped_column(nullable=False)
+    
 
     skills: Mapped[List["SkillModel"]] = relationship("SkillModel", back_populates="hero")
     players: Mapped[List["PlayerModel"]] = relationship("PlayerModel", back_populates="hero")
@@ -59,3 +75,12 @@ class playerAndSkill(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), nullable=False)
     level: Mapped[int] = mapped_column(default=1)
+
+
+
+
+
+
+
+
+

@@ -14,7 +14,11 @@ router = APIRouter(prefix="/player", tags=['player'])
 
 @router.post("/hero/create", response_model=ReadHero, tags=['hero'])
 async def register_hero(data: Hero, db: AsyncSession = Depends(get_db)):
-    new_hero = HeroModel(name=data.name)
+    new_hero = HeroModel(name=data.name, 
+                         base_hp = data.base_hp, 
+                         base_attack = data.base_attack, 
+                         base_defense = data.base_defense,
+                         base_agility = data.base_agility)
     db.add(new_hero)
     # await db.flush()
     await db.commit()
@@ -93,27 +97,39 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
 
     loc = min_loc.scalar_one_or_none()
 
+    result = await db.execute(select(HeroModel)
+                              .where(HeroModel.id == data.hero_id))
+    
+    hero = result.scalar_one_or_none()
+    print(hero)
     # INSERT INTO player (nickname, hero_id, user_id)
     #VALUES ("илья", 2, 4)
     new_player = PlayerModel(
         nickname=data.nickname, 
         hero_id=data.hero_id, 
         user_id=data.user_id,
-        locations_id = loc.id)
+        locations_id = loc.id,
+        max_hp = hero.base_hp,
+        attack = hero.base_attack,
+        defense = hero.base_defense,
+        agility = hero.base_agility)
     
+
+
     db.add(new_player)
     await db.commit()
     await db.refresh(new_player)
+
     
     # SELECT id, name, skills, players FROM heros WHERE id == 3 
     result = await db.execute(select(HeroModel)
-                              .where(HeroModel.id == new_player.hero_id)
+                              .where(HeroModel.id == data.hero_id)
                               .options(selectinload(HeroModel.skills)))
     hero = result.scalar_one_or_none()
 
     for skill in hero.skills:
-        #INSERT INTO playerandskills (player_id, skill_id)
-        #VALUES (1, 2)
+        # INSERT INTO playerandskills (player_id, skill_id)
+        # VALUES (1, 2)
 
         new_ps = playerAndSkill(player_id = new_player.id, skill_id = skill.id)
         db.add(new_ps)

@@ -4,6 +4,11 @@ from typing import Optional, List
 
 class Hero(BaseModel):
     name: str
+    base_hp: int
+    base_attack: int
+    base_defense: int
+    base_agility: int
+    
     class Config:
         from_attributes=True
 

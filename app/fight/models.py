@@ -13,3 +13,40 @@ class FightModel(Base):
     loser_id:Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
 
    
+class FightSession(Base):
+    __tablename__ = "fightsession"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+
+    attacker_id: Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
+    opponent_id: Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
+
+    attacker_current_hp: Mapped[int] = mapped_column(nullable=False)
+    opponent_current_hp: Mapped[int] = mapped_column(nullable=False)
+
+    winner_id: Mapped[int]
+
+    current_turn: Mapped[int] = mapped_column(default=1)
+    attacker_turn: Mapped[bool] = mapped_column(default=True)
+
+    status: Mapped[str] = mapped_column(default="active")
+
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+
+
+   
+class FightLog(Base):
+    __tablename__ = "fightlog"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    
+    fight_session_id: Mapped[int] = mapped_column(ForeignKey("fightsession.id"),nullable=False)
+
+    turn_number: Mapped[int]
+    attacker_id: Mapped[int]
+    defender_id: Mapped[int]
+    damage_dealt: Mapped[int]
+
+    action_type: Mapped[str]
+    description: Mapped[str]
+

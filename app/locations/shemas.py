@@ -10,6 +10,8 @@ class LocationsBase(BaseModel):
     class Config:
         from_attributes=True
 
+class ReadLocation(LocationsBase):
+    id: int
 
 class LocationList(BaseModel):
     locations: List[ReadLocation]
@@ -26,8 +28,6 @@ class StoreBase(BaseModel):
     didescription: str
     location_id: int
 
-class ReadLocations(LocationsBase):
-    id: int
 
 
 class ReadProducts(Products):
