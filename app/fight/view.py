@@ -55,23 +55,32 @@ async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     return ListFights(fights=fights_)
 
 
-@router.post("/playerHasFight", response_model=ListFights)
-async def player_Has_Fight(id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(FightModel)
-                              .where(
-                                    (FightModel.winner_id == id) |
-                                    (FightModel.loser_id == id)))
-    fights_ = result.scalars().all()
+@router.post("/ActiveFight", response_model=choiceActiveFight)
+async def Active_fight(player_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightSession)
+                                .where(
+                                    (FightSession.attacker_id == player_id) |
+                                    (FightSession.opponent_id == player_id))
+                                .where(FightSession.status == "active"))
+    activeFight = result.scalar_one_or_none()
+    print(activeFight)
 
-    return ListFights(fights=fights_)
+    if activeFight is None:
+         raise HTTPException(status_code=404, detail="не найден польователь")
+         
+    
+    return choiceActiveFight(id=activeFight.id)
 
 
-
-@router.post("/startFight")
+@router.post("/FightTextStep")
 async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
-                              .where(FightSession.id == session_id))
+                              .where(FightSession.id == session_id)
+                              .where(FightSession.status == "active"))
     session = result.scalar_one_or_none()
+
+    if session is None:
+         return HTTPException(status_code=404, detail="ошибка сесии")  
 
 
     res = await db.execute(select(PlayerModel)
@@ -152,24 +161,12 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/steps/next", response_model=ListFightSteps)
-async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(FightLog)
-                              .where(FightLog.fight_session_id == fight_id))
-    s = result.scalars().all()
-
-    print(s)
-
-    return ListFightSteps(steps=s)
-
     
 @router.post("/steps/info", response_model=ListFightSteps)
 async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightLog)
                               .where(FightLog.fight_session_id == fight_id))
     s = result.scalars().all()
-
-    print(s)
 
     return ListFightSteps(steps=s)
 

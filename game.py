@@ -207,7 +207,9 @@ def game():
 
 
     def fight_step():
-        pass
+        fight_id = 1
+        response = requests.post(f"{API_URL}/fight/steps/info?fight_id={fight_id}")
+        res = response.json()
 
     while True:
         text = """

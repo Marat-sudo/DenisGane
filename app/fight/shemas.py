@@ -41,6 +41,11 @@ class ListFights(BaseModel):
         from_attributes = True
 
 
+class choiceActiveFight(BaseModel):
+    id: int
+
+
+
 
 class choiceFightStep(BaseModel):
     id: int 
