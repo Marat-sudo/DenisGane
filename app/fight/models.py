@@ -50,3 +50,5 @@ class FightLog(Base):
     action_type: Mapped[str]
     description: Mapped[str]
 
+    
+
