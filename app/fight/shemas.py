@@ -42,3 +42,32 @@ class ListFights(BaseModel):
 
 
 
+class choiceFightStep(BaseModel):
+    id: int 
+    fight_session_id: int
+    turn_number: int
+    attacker_id: int
+    defender_id: int
+    damage_dealt: int
+
+    action_type: str
+    description: str
+
+    class Config:
+        from_attributes = True
+    
+class ReadFightStep(choiceFightStep):
+    id: int
+
+
+class ListFightSteps(BaseModel):
+    steps: List[ReadFightStep]
+
+
+
+
+
+
+
+
+

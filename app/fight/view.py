@@ -67,7 +67,7 @@ async def player_Has_Fight(id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/turn")
+@router.post("/startFight")
 async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
                               .where(FightSession.id == session_id))
@@ -151,7 +151,31 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     return log
 
 
+
+@router.post("/steps/next", response_model=ListFightSteps)
+async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightLog)
+                              .where(FightLog.fight_session_id == fight_id))
+    s = result.scalars().all()
+
+    print(s)
+
+    return ListFightSteps(steps=s)
+
     
+@router.post("/steps/info", response_model=ListFightSteps)
+async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightLog)
+                              .where(FightLog.fight_session_id == fight_id))
+    s = result.scalars().all()
+
+    print(s)
+
+    return ListFightSteps(steps=s)
+
+
+
+
 
 def createLog(
         attack: PlayerModel, 

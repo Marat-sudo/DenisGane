@@ -228,8 +228,6 @@ def game():
             start_fight()
         elif choise == 5:
             user_statistics()
-        elif choise == 6:
-            fight_step()
 
 
 
