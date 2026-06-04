@@ -173,8 +173,14 @@ def game():
         PLAYER_ID = choise_id
 
         response = requests.post(f"{API_URL}/fight/userList?id={PLAYER_ID}")
-        data = response.json()
-        data = data["fights"]
+        res = response.json()
+        
+        data = res["fights"]
+
+
+        if data == []:
+            print("нет статистики")
+            return
 
         table = Table(title="[bold]статистика", show_lines=True)
 
@@ -199,6 +205,10 @@ def game():
         print(f"[red]{los_count} поражений")
         print(f"[magenta]в процентах {(win_count / (win_count + los_count)) * 100}%")
 
+
+    def fight_step():
+        pass
+
     while True:
         text = """
         1. Просмотр персонажей;
@@ -206,6 +216,7 @@ def game():
         3. Мой профиль
         4. отправитсья в бой
         5. статистика
+        6. состояние битвы
         0. Выйти.
         """
         choise = int(input(f"{text}\n Выбор: "))
@@ -217,6 +228,8 @@ def game():
             start_fight()
         elif choise == 5:
             user_statistics()
+        elif choise == 6:
+            fight_step()
 
 
 

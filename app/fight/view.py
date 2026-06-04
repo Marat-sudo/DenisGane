@@ -22,7 +22,8 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     if attacker is None:
         return HTTPException(status_code=404, detail="атакующий не найден")    
     
-    result = await db.execute(select(PlayerModel).where(PlayerModel.id != attacker_id))
+    result = await db.execute(select(PlayerModel)
+                              .where(PlayerModel.id != attacker_id))
     players = result.scalars().all()
     opponent = random.choice(players)
 
@@ -47,7 +48,18 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
 async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightModel)
                               .where(
-                                   ( FightModel.winner_id == id) |
+                                    (FightModel.winner_id == id) |
+                                    (FightModel.loser_id == id)))
+    fights_ = result.scalars().all()
+
+    return ListFights(fights=fights_)
+
+
+@router.post("/playerHasFight", response_model=ListFights)
+async def player_Has_Fight(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightModel)
+                              .where(
+                                    (FightModel.winner_id == id) |
                                     (FightModel.loser_id == id)))
     fights_ = result.scalars().all()
 

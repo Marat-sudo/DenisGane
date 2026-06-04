@@ -32,6 +32,8 @@ class ReadFight(choiceFight):
         from_attributes = True
 
 
+# class ReadTurn()
+
 class ListFights(BaseModel):
     fights: List[ReadFight]
 
