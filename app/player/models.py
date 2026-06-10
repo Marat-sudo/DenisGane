@@ -18,7 +18,8 @@ class PlayerModel(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     locations_id:Mapped[int] = mapped_column(ForeignKey("locations.id"),nullable=False)
 
-
+    mana: Mapped[int] = mapped_column(nullable=False)
+    max_mana: Mapped[int] = mapped_column(nullable=False)
     max_hp: Mapped[int] = mapped_column(nullable=False)
     attack: Mapped[int] = mapped_column(nullable=False)
     defense: Mapped[int] = mapped_column(nullable=False)
@@ -48,6 +49,7 @@ class HeroModel(Base):
     base_attack: Mapped[int] = mapped_column(nullable=False)
     base_defense: Mapped[int] = mapped_column(nullable=False)
     base_agility: Mapped[int] = mapped_column(nullable=False)
+    base_mana: Mapped[int] = mapped_column(nullable=False)
     
 
     skills: Mapped[List["SkillModel"]] = relationship("SkillModel", back_populates="hero")
@@ -63,6 +65,13 @@ class SkillModel(Base):
     hero_id:Mapped[int] =mapped_column(ForeignKey("heros.id"),nullable=False)
 
     level: Mapped[int] = mapped_column(default=1)
+
+    damage_damage: Mapped[float]
+    base_damage: Mapped[int]
+    mana_cost: Mapped[int]
+    cooldown: Mapped[int]
+    skill_type: Mapped[str]
+    description: Mapped[str]
 
     name: Mapped[str]
 

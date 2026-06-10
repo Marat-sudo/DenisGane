@@ -74,5 +74,3 @@ class ListFightSteps(BaseModel):
 
 
 
-
-

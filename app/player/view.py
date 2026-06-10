@@ -18,7 +18,8 @@ async def register_hero(data: Hero, db: AsyncSession = Depends(get_db)):
                          base_hp = data.base_hp, 
                          base_attack = data.base_attack, 
                          base_defense = data.base_defense,
-                         base_agility = data.base_agility)
+                         base_agility = data.base_agility,
+                         base_mana = data.base_mana)
     db.add(new_hero)
     # await db.flush()
     await db.commit()
@@ -52,7 +53,7 @@ async def hero_list(db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/hero/delete", tags=['hero'])
-async def delete_hero(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_hero(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(HeroModel).where(HeroModel.id == id)) 
     hero = result.scalar_one_or_none()
     await db.delete(hero)
@@ -66,7 +67,16 @@ async def delete_hero(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/skills/create", response_model=ReadSkills, tags=['skills'])
 async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
 
-    new_skill = SkillModel(name=data.name, hero_id = data.hero_id)
+    new_skill = SkillModel(name=data.name, 
+                           hero_id = data.hero_id,
+                           damage_multiplier = data.damage_multiplier,
+                           base_damage = data.base_damage,
+                           mana_cost = data.mana_cost,
+                           cooldown = data.cooldown,
+                           skill_type = data.skill_type,
+                           description = data.description
+                           )
+
     db.add(new_skill)
     # await db.flush()
     await db.commit()
@@ -76,6 +86,13 @@ async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
     raise HTTPException(status_code=201, detail=dict(data))
     
 
+# TODO тут надо get этот сделать будет
+@router.post("/skills/list",  response_model=SkillsList)
+async def skills_list(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(HeroModel))
+    heroes = result.scalars().all()
+
+    return HeroList(heroes=heroes)
 
 @router.delete("/skills/delete", tags=['skills'])
 async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
@@ -112,7 +129,9 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
         max_hp = hero.base_hp,
         attack = hero.base_attack,
         defense = hero.base_defense,
-        agility = hero.base_agility)
+        agility = hero.base_agility,
+        mana = hero.base_mana,
+        max_mana = hero.base_mana)
     
 
 
@@ -156,6 +175,14 @@ async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_d
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
     player = result.scalar_one_or_none()
+
+    return player
+
+
+@router.post("/skills", response_model=ReadPlayer)
+async def info_player(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
+    player = result.scalar('user_or_none')
 
     return player
 

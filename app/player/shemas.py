@@ -8,6 +8,7 @@ class Hero(BaseModel):
     base_attack: int
     base_defense: int
     base_agility: int
+    base_mana: int
     
     class Config:
         from_attributes=True
@@ -33,16 +34,36 @@ class HeroList(BaseModel):
 class Skills(BaseModel):
     hero_id: int
     name: str
+    damage_multiplier: float
+    base_damage: int
+    mana_cost: int
+    cooldown: int
+    skill_type: str
+    description: str 
+
+    class Config:
+        from_attributes = True
+
 
 class ReadSkills(Skills):
     id: int
+
+class ChoiceSkill(Skills):
+    id: int
+
+class SkillsList(BaseModel):
+    skills: list[ChoiceSkill]
+    
 
 class Player(BaseModel):
     nickname: str
     user_id: int
     hero_id: int
+    
+
 
 class ReadPlayer(Player):
     id: int
     level: int
     exp: int
+    
