@@ -18,20 +18,50 @@ router = APIRouter(prefix="/fight", tags=['fight'])
 async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == attacker_id)) 
     attacker = result.scalar_one_or_none()
-    
-    if attacker is None:
-        return HTTPException(status_code=404, detail="атакующий не найден")    
+    check_attaker = await db.execute(select(FightSession)
+                                     .where(
+                                            (FightSession.attacker_id == attacker.id) |
+                                            (FightSession.opponent_id == attacker.id),
+                                            FightSession.status =="active"))
+    if check_attaker.scalar_one_or_none():
+        raise HTTPException(status_code=200, detail="вы уже находитесь в бою")
     
     result = await db.execute(select(PlayerModel).where(PlayerModel.id != attacker_id))
     players = result.scalars().all()
-    opponent = random.choice(players)
 
+    if not players:
+         raise HTTPException(status_code=404, detail="оппоненты не найдены")
 
+    async def chech_status_opponent():
+        opponent = random.choice(players)
+        check = await db.execute(select(FightSession)
+                             .where((FightSession.opponent_id == opponent.id) |
+                                    (FightSession.attacker_id == opponent.id),
+                                    FightSession.status == "active"))
+    
+      
+        result_check = check.scalar_one_or_none()
+        print(result_check)
+        print(players)
+        if result_check:
+            players.pop(opponent)
+            if len(players) <= 0:
+                  return False
+            return await chech_status_opponent()
+        else:
+            return opponent
+        
+        
+    opponent = await chech_status_opponent()
+
+ 
     session = FightSession(
         attacker_id = attacker.id,
         opponent_id = opponent.id,
         attacker_current_hp = attacker.max_hp,
-        opponent_current_hp = opponent.max_hp
+        opponent_current_hp = opponent.max_hp,
+        attacker_mana = attacker.mana,
+        opponent_mana = opponent.mana
     )
 
 
@@ -47,7 +77,7 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
 async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightModel)
                               .where(
-                                   ( FightModel.winner_id == id) |
+                                    (FightModel.winner_id == id) |
                                     (FightModel.loser_id == id)))
     fights_ = result.scalars().all()
 
@@ -55,12 +85,28 @@ async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/startFight")
+@router.post("/fight/active", response_model=ReadFightStep)
+async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FightSession)
+                              .where(
+                                    (FightSession.attacker_id == id) |
+                                    (FightSession.opponent_id == id))
+                                .where(FightSession.status == "active"))
+    
+    fight = result.scalar_one_or_none()
+
+    return ReadFightStep(fight)
+
+
+@router.post("/fights/turn")
 async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
-                              .where(FightSession.id == session_id))
+                              .where(FightSession.id == session_id,
+                                     FightSession.status == "active"))
     session = result.scalar_one_or_none()
 
+    if not session:
+        raise HTTPException(status_code=200, detail="бой окончен")
 
     res = await db.execute(select(PlayerModel)
                               .where(PlayerModel.id == session.opponent_id))
@@ -70,6 +116,7 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
                               .where(PlayerModel.id == session.attacker_id))
     attacker  = res.scalar_one_or_none()
 
+    
     if session.attacker_turn:
         damage = attacker.attack - opponent.defense
 
@@ -82,19 +129,34 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.opponent_current_hp = 0
             session.status = "finish"
             session.winner_id = attacker.id
+            newHP = 0
 
+            log = await createLog(attack=attacker, 
+                            defender=opponent, 
+                            session=session, 
+                            damage=damage, 
+                            defHp=newHP,
+                            attHp=session.attacker_current_hp,
+                            act_type="attack",
+                            skill_id=None,
+                            mana_spent=0,
+                            is_critical=False)
 
         else:
             session.opponent_current_hp = newHP
 
             
 
-            log = createLog(attacker, 
-                            opponent, 
-                            session, 
-                            damage, 
-                            newHP,
-                            session.attacker_current_hp)
+            log = await createLog(attack=attacker, 
+                            defender=opponent, 
+                            session=session, 
+                            damage=damage, 
+                            defHp=newHP,
+                            attHp=session.attacker_current_hp,
+                            act_type="attack",
+                            skill_id=None,
+                            mana_spent=0,
+                            is_critical=False)
        
             session.current_turn += 1
             session.attacker_turn = not session.attacker_turn
@@ -116,17 +178,33 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
 
             session.status = "finish"
             session.winner_id = opponent.id
+            newHP = 0
+
+            log = await createLog(attack=opponent, 
+                            defender=attacker, 
+                            session=session, 
+                            damage=damage, 
+                            defHp=newHP,
+                            attHp=session.opponent_current_hp,
+                            act_type="attack",
+                            skill_id=None,
+                            mana_spent=0,
+                            is_critical=False)
 
         else:
 
             session.attacker_current_hp = newHP
 
-            log = createLog(opponent, 
-                            attacker, 
-                            session, 
-                            damage, 
-                            newHP, 
-                            session.opponent_current_hp)
+            log = await createLog(attack=opponent, 
+                            defender=attacker, 
+                            session=session, 
+                            damage=damage, 
+                            defHp=newHP,
+                            attHp=session.opponent_current_hp,
+                            act_type="attack",
+                            skill_id=None,
+                            mana_spent=0,
+                            is_critical=False)
             
             session.current_turn += 1
             session.attacker_turn = not session.attacker_turn
@@ -139,16 +217,6 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     return log
 
 
-
-@router.post("/steps/next", response_model=ListFightSteps)
-async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(FightLog)
-                              .where(FightLog.fight_session_id == fight_id))
-    s = result.scalars().all()
-
-    print(s)
-
-    return ListFightSteps(steps=s)
 
     
 @router.post("/steps/info", response_model=ListFightSteps)
@@ -164,14 +232,17 @@ async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-
-def createLog(
+async def createLog(
         attack: PlayerModel, 
         defender: PlayerModel,
         session: FightSession,
         damage: int,
         defHp: int,
-        attHp: int) -> FightLog:
+        attHp: int,
+        act_type: str,
+        skill_id: int,
+        mana_spent: int,
+        is_critical: bool) -> FightLog:
     
     _log = FightLog(
         fight_session_id = session.id,
@@ -180,8 +251,12 @@ def createLog(
         defender_id = defender.id,
         damage_dealt = damage,
 
-        action_type = "attack",
-        description = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона до {defHp} HP"
+        action_type = act_type,
+        description = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона до {defHp} HP",
+        
+        skill_id = skill_id,
+        mana_spent = mana_spent,
+        is_critical = is_critical
         )
     return _log
 

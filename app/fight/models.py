@@ -23,6 +23,8 @@ class FightSession(Base):
 
     attacker_current_hp: Mapped[int] = mapped_column(nullable=False)
     opponent_current_hp: Mapped[int] = mapped_column(nullable=False)
+    attacker_mana: Mapped[int]
+    opponent_mana: Mapped[int]
 
     winner_id: Mapped[int] = mapped_column(nullable=True, default=None)
 
@@ -50,5 +52,18 @@ class FightLog(Base):
     action_type: Mapped[str]
     description: Mapped[str]
 
+    skill_id: Mapped[int] = mapped_column(nullable=True)
+    mana_spent: Mapped[int]
+    is_critical: Mapped[bool]
+
+
     
+class PlayerSkillCooldown(Base):
+    __tablename__="playerskillcooldown"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    fight_session_id: Mapped[int] = mapped_column(ForeignKey("fightsession.id"),nullable=False)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"),nullable=False)
+    skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"),nullable=False)
+    turns_remaining: Mapped[int]
+
 
