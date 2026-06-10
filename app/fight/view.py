@@ -86,7 +86,7 @@ async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
 
 
 
-@router.post("/startFight")
+@router.post("/fight/step")
 async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
                               .where(FightSession.id == session_id))
@@ -116,37 +116,19 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.winner_id = attacker.id
             newHP = 0
 
-            log = await createLog(attack=attacker, 
-                            defender=opponent, 
-                            session=session, 
-                            damage=damage, 
-                            defHp=newHP,
-                            attHp=session.attacker_current_hp,
-                            act_type="attack",
-                            skill_id=None,
-                            mana_spent=0,
-                            is_critical=False)
 
-        else:
-            session.opponent_current_hp = newHP
-
-            
-
-            log = await createLog(attack=attacker, 
-                            defender=opponent, 
-                            session=session, 
-                            damage=damage, 
-                            defHp=newHP,
-                            attHp=session.attacker_current_hp,
-                            act_type="attack",
-                            skill_id=None,
-                            mana_spent=0,
-                            is_critical=False)
-       
-            session.current_turn += 1
-            session.attacker_turn = not session.attacker_turn
-        
-
+        session.opponent_current_hp = newHP
+        log = await createLog(attack=attacker, 
+                        defender=opponent, 
+                        session=session, 
+                        damage=damage, 
+                        defHp=newHP,
+                        attHp=session.attacker_current_hp,                            act_type="attack",
+                        skill_id=None,
+                        mana_spent=0,
+                        is_critical=False)
+    
+    
     # атакует оппонент
     else:
         
@@ -165,35 +147,26 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.winner_id = opponent.id
             newHP = 0
 
-            log = await createLog(attack=opponent, 
-                            defender=attacker, 
-                            session=session, 
-                            damage=damage, 
-                            defHp=newHP,
-                            attHp=session.opponent_current_hp,
-                            act_type="attack",
-                            skill_id=None,
-                            mana_spent=0,
-                            is_critical=False)
 
-        else:
-
-            session.attacker_current_hp = newHP
-
-            log = await createLog(attack=opponent, 
-                            defender=attacker, 
-                            session=session, 
-                            damage=damage, 
-                            defHp=newHP,
-                            attHp=session.opponent_current_hp,
-                            act_type="attack",
-                            skill_id=None,
-                            mana_spent=0,
-                            is_critical=False)
+        session.attacker_current_hp = newHP
+        log = await createLog(attack=opponent, 
+                        defender=attacker, 
+                        session=session, 
+                        damage=damage, 
+                        defHp=newHP,
+                        attHp=session.opponent_current_hp,
+                        act_type="attack",
+                        skill_id=None,
+                        mana_spent=0,
+                        is_critical=False)
             
-            session.current_turn += 1
-            session.attacker_turn = not session.attacker_turn
+        
 
+            
+    session.current_turn += 1
+    session.attacker_turn = not session.attacker_turn    
+    
+    
     db.add(log)
     await db.commit()
     await db.refresh(session)
