@@ -44,7 +44,7 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     return HTTPException(status_code=200, detail=session)
 
 
-@router.post("/userList", response_model=ListFights)
+@router.post("/history", response_model=ListFights)
 async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightModel)
                               .where(
@@ -66,13 +66,13 @@ async def Active_fight(player_id: int, db: AsyncSession = Depends(get_db)):
     print(activeFight)
 
     if activeFight is None:
-         raise HTTPException(status_code=404, detail="не найден польователь")
+         raise HTTPException(status_code=404, detail="не найден польователь или нет активного боя")
          
     
     return choiceActiveFight(id=activeFight.id)
 
 
-@router.post("/FightTextStep")
+@router.post("/turn")
 async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
                               .where(FightSession.id == session_id)
@@ -162,7 +162,7 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
 
 
     
-@router.post("/steps/info", response_model=ListFightSteps)
+@router.post("/session", response_model=ListFightSteps)
 async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightLog)
                               .where(FightLog.fight_session_id == fight_id))

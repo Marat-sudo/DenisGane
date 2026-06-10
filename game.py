@@ -207,10 +207,56 @@ def game():
 
 
     def fight_step():
-        fight_id = 1
-        response = requests.post(f"{API_URL}/fight/steps/info?fight_id={fight_id}")
-        res = response.json()
+        get_user_hero()
+        choise_id = int(input("выберите своего героя из спика: "))
+        PLAYER_ID = choise_id
 
+ 
+        response = requests.post(f"{API_URL}/fight/ActiveFight?player_id={PLAYER_ID}")
+        if response.status_code != 200:
+            print("нет активных боёв")
+            return
+        data = response.json()
+        fight_id = data["id"]
+
+        print(data)
+
+        res = requests.post(f"{API_URL}/fight/session?fight_id={fight_id}")
+        steps = res.json()
+        print(steps)
+        last_step = steps["steps"][-1]
+        
+
+
+        table = Table(title="[bold]Логи битвы")
+        table.add_column("враг")
+        table.add_column("тип атаки")
+        table.add_column("всего нанёс урона")
+        table.add_column("описание")
+
+        for step in steps["steps"]:
+            print(step)
+            resPlayer = requests.post(f"{API_URL}/player/info?id={step["attacker_id"]}")
+            player = resPlayer.json()
+            
+            table.add_row(player["nickname"], step["action_type"],str( step["damage_dealt"]), step["description"])
+            table.add_section()
+        print(table)
+
+        if last_step["attacker_id"] == PLAYER_ID:
+            print("вы ожидайете действия врага")
+
+        else:
+            # TODO тип действий тут
+            act_type = int(input("введите что-то"))
+
+            resSession = requests.post(f"{API_URL}/fight/turn?session_id={fight_id}")
+            session = res.json()
+            # TODO я устал
+            print("")
+
+
+        
     while True:
         text = """
         1. Просмотр персонажей;
@@ -230,6 +276,8 @@ def game():
             start_fight()
         elif choise == 5:
             user_statistics()
+        elif choise == 6:
+            fight_step()
 
 
 

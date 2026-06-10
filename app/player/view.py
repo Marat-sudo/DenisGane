@@ -155,7 +155,7 @@ async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_d
 @router.post("/info", response_model=ReadPlayer)
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
-    player = result.scalar('user_or_none')
+    player = result.scalar_one_or_none()
 
     return player
 
@@ -163,6 +163,6 @@ async def info_player(id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/choiseLocations", response_model=ReadPlayer)
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
-    player = result.scalar('user_or_none')
+    player = result.scalar_one_or_none()
 
     return player
