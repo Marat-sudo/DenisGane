@@ -2,6 +2,7 @@ import requests, json
 from rich import print
 from rich.console import Console
 from rich.table import Table
+from rich import box
 
 from rich.panel import Panel
 
@@ -21,54 +22,29 @@ def game():
 
         
         if len(players) > 0:
-            max_size = 0
-            text = ""
-            
-            for index, player in enumerate(players):
-                size = (
-                f"nickname: {player["nickname"]}",
-                f"номер героя: {index + 1}",
-                f"id героя: {player["hero_id"]}",
-                f"уровнь игрока: {player["level"]}",
-                f"количество опыта игрока: {player["exp"]}",
-                )
-                s = len(max(size, key=len))
-                if s > max_size:
-                    max_size = s 
-
-            text_border =  "|" + ("=" * (max_size + 4)) + "|\n" 
-            
-
-            
+            table = Table(
+                title="Персонажи",
+                show_header=False,
+                show_edge=True,
+                show_lines=True,
+                box=box.ROUNDED,
+                padding=(0, 1)  )
+  
             for index, player in enumerate(players):
                 # response_hero = requests.post(f"{API_URL}/hero/info", json={"id": player["hero_id"]})
                 # hero_name = response.json()
                 # print(hero_name)
+                text = ""
 
-                text_nickname = f"nickname: {player["nickname"]}"
-                text_number = f"номер героя: {index + 1}"
-                text_hero_id = f"id героя: {player["hero_id"]}"
-                text_level = f"уровнь игрока: {player["level"]}"
-                text_exp = f"количество опыта игрока: {player["exp"]}"
+                text += f"nickname: {player["nickname"]}\n"
+                text += f"id героя: {player["hero_id"]}\n"
+                text += f"уровнь игрока: {player["level"]}\n"
+                text += f"количество опыта игрока: {player["exp"]}"
 
-                text += text_border
-                
-                text += f"|%-{max_size + 4}s|" % text_nickname
-                text += "\n"
-                text += f"|%-{max_size + 4}s|" % text_number
-                text += "\n"
+                table.add_row(text)
 
-                text += f"|%-{max_size + 4}s|" % text_hero_id
-                text += "\n"
-
-                text += f"|%-{max_size + 4}s|" % text_level
-                text += "\n"
-
-                text += f"|%-{max_size + 4}s|" % text_exp
-                text += "\n"
-                text += text_border
-
-            print(text)
+            print("\n")
+            print(table)
 
         else:
             print("Нет персонажей")
@@ -80,28 +56,27 @@ def game():
         response = requests.post(f"{API_URL}/player/hero/list")
         data = response.json()
         heroes = data["heroes"]
-        text = ""
-        max_name = 0
+        
+        
+      
+        table = Table(
+                title="Персонажи",
+                show_header=False,
+                show_edge=True,
+                show_lines=True,
+                box=box.ROUNDED,
+                padding=(0, 1))
 
-        for hero in heroes:
-            text_name = f"название героя {hero["name"]}"
-            if len(text_name) > max_name:
-                max_name = len(text_name)
-
-
-        text_border ="|" + ("=" * (max_name + 4))+ "|\n"
-        text += text_border 
         for index, hero in enumerate(heroes):
-            text_name = f"название героя {hero["name"]}"
-            text_number = f"номер героя {index + 1}"
+            text = ""
+            text += f"название героя: {hero["name"]}\n"
+            text += f"номер героя: {index + 1}"
+            table.add_row(text)
 
-            text += f"|%-{max_name + 4}s|" % text_name
-            text += "\n"
-            text += f"|%-{max_name + 4}s|" % text_number
-            text += "\n"
-            text += text_border
+        print("\n")
+        print(table)
             
-        choise = int(input(text + "\nВыбор номера героя: ")) - 1
+        choise = int(input("\nВыбор номера героя: ")) - 1
         
         hero_id = heroes[choise]["id"]
         nickname = input("Введите nickname вашего персонажа: ")
@@ -131,7 +106,7 @@ def game():
         table.add_column("описание")
         table.add_column("минимальный уровень")
         table.add_column("номер")
-
+    
         print(data)
         for loc in data["locations"]:
             table.add_row(loc["name"], loc["didescription"], str(loc["min_level"]), str(loc["id"]))

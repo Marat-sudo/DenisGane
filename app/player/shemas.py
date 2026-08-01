@@ -32,8 +32,8 @@ class HeroList(BaseModel):
     
 
 class Skills(BaseModel):
-    hero_id: int
     name: str
+    hero_id: int
     damage_multiplier: float
     base_damage: int
     mana_cost: int
@@ -47,12 +47,19 @@ class Skills(BaseModel):
 
 class ReadSkills(Skills):
     id: int
+    # heros: List["HeroModel"]
+    # class Config:
+    #     from_attributes = True
+    
 
 class ChoiceSkill(Skills):
     id: int
 
 class SkillsList(BaseModel):
     skills: list[ChoiceSkill]
+
+    class Config:
+        from_attributes = True
     
 
 class Player(BaseModel):

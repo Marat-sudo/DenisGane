@@ -33,7 +33,7 @@ async def register_hero(data: Hero, db: AsyncSession = Depends(get_db)):
     
 
 
-@router.post("/hero/info", response_model=ReadHero, tags=['hero'] )
+@router.get("/hero/info", response_model=ReadHero, tags=['hero'] )
 async def info_hero(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(HeroModel).where(HeroModel.id == id))
     hero = result.scalar_one_or_none()
@@ -41,7 +41,7 @@ async def info_hero(id: int, db: AsyncSession = Depends(get_db)):
     return hero
 
 
-@router.post("/hero/list",  response_model=HeroList, tags=['hero'])
+@router.get("/hero/list",  response_model=HeroList, tags=['hero'])
 async def hero_list(db: AsyncSession = Depends(get_db)):
     # SELECT id, name FROM heros;
     result = await db.execute(select(HeroModel))
@@ -82,17 +82,17 @@ async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_skill)
     
-    # return dict(new_user)
-    raise HTTPException(status_code=201, detail=dict(data))
+    return new_skill
     
 
-# TODO тут надо get этот сделать будет
-@router.post("/skills/list",  response_model=SkillsList)
-async def skills_list(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(HeroModel))
-    heroes = result.scalars().all()
+@router.get("/skills", response_model=SkillsList)
+async def info_player(id: int, db: AsyncSession = Depends(get_db)):
+    """Возвращает скилы пользователя"""
+    result = await db.execute(select(SkillModel).where(SkillModel.hero_id == id))
+    _skills = result.scalars().all()
 
-    return HeroList(heroes=heroes)
+    return SkillsList(skills=_skills)
+
 
 @router.delete("/skills/delete", tags=['skills'])
 async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
@@ -158,7 +158,8 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
     return new_player
 
 
-@router.put("/update", response_model=ReadPlayer)
+    
+@router.put("/updatePlayerLocation", response_model=ReadPlayer)
 async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id)) 
     player = result.scalar_one_or_none()
@@ -171,7 +172,7 @@ async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_d
     return player
 
 
-@router.post("/info", response_model=ReadPlayer)
+@router.get("/info", response_model=ReadPlayer)
 async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
     player = result.scalar_one_or_none()
@@ -179,17 +180,3 @@ async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     return player
 
 
-@router.post("/skills", response_model=ReadPlayer)
-async def info_player(id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
-    player = result.scalar('user_or_none')
-
-    return player
-
-
-@router.post("/choiseLocations", response_model=ReadPlayer)
-async def info_player(id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
-    player = result.scalar_one_or_none()
-
-    return player

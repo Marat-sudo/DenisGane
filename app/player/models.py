@@ -61,19 +61,19 @@ class SkillModel(Base):
     __tablename__="skills"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-
+    name: Mapped[str]
     hero_id:Mapped[int] =mapped_column(ForeignKey("heros.id"),nullable=False)
 
     level: Mapped[int] = mapped_column(default=1)
 
-    damage_damage: Mapped[float]
+    damage_multiplier: Mapped[float]
     base_damage: Mapped[int]
     mana_cost: Mapped[int]
     cooldown: Mapped[int]
     skill_type: Mapped[str]
     description: Mapped[str]
 
-    name: Mapped[str]
+    
 
     hero: Mapped[List["HeroModel"]] = relationship("HeroModel", back_populates="skills")
 

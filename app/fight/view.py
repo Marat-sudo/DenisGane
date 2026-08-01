@@ -116,6 +116,17 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.winner_id = attacker.id
             newHP = 0
 
+            win = await FightModel(
+                 winner_id=attacker.id,
+                 loser_id=opponent.id
+            )
+
+            db.add(win)
+            await db.commit()
+            await db.refresh(session)
+            
+            return win
+
 
         session.opponent_current_hp = newHP
         log = await createLog(attack=attacker, 
@@ -123,7 +134,8 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
                         session=session, 
                         damage=damage, 
                         defHp=newHP,
-                        attHp=session.attacker_current_hp,                            act_type="attack",
+                        attHp=session.attacker_current_hp,                            
+                        act_type="attack",
                         skill_id=None,
                         mana_spent=0,
                         is_critical=False)
@@ -146,6 +158,18 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.status = "finish"
             session.winner_id = opponent.id
             newHP = 0
+
+            win = await FightModel(
+                 winner_id=opponent.id,
+                 loser_id=attacker.id
+            )
+
+            db.add(win)
+            await db.commit()
+            await db.refresh(session)
+            
+            return win
+            
 
 
         session.attacker_current_hp = newHP
