@@ -18,5 +18,11 @@ table = Table(
 table.add_row("Короткая строка")
 table.add_row("Самая длинная строка в этом едином блоке")
 table.add_row("Ещё одна секция снизу")
+a = None
 
-console.print(table)
+if a:
+    print(2)
+else:
+    print(1)
+
+# console.print(table)

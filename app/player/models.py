@@ -78,7 +78,7 @@ class SkillModel(Base):
     hero: Mapped[List["HeroModel"]] = relationship("HeroModel", back_populates="skills")
 
 
-class playerAndSkill(Base):
+class PlayerAndSkill(Base):
     __tablename__="playerandskills"
     id: Mapped[int]  = mapped_column(primary_key=True, autoincrement=True)
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)

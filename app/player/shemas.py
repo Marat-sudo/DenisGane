@@ -31,7 +31,15 @@ class HeroList(BaseModel):
     heroes: list[ChoiceHero]
     
 
+class SkillCooldown(BaseModel):
+    id: int
+    cooldown: int
+
+    class Config:
+        from_attributes = True
+
 class Skills(BaseModel):
+    id: int
     name: str
     hero_id: int
     damage_multiplier: float
@@ -74,3 +82,9 @@ class ReadPlayer(Player):
     level: int
     exp: int
     
+
+class ReadPlayerSkill(BaseModel):
+    id: int
+    player_id: int
+    skill_id: int
+    level: int

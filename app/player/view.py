@@ -35,7 +35,9 @@ async def register_hero(data: Hero, db: AsyncSession = Depends(get_db)):
 
 @router.get("/hero/info", response_model=ReadHero, tags=['hero'] )
 async def info_hero(id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(HeroModel).where(HeroModel.id == id))
+    result = await db.execute(select(HeroModel)
+                                        .where(HeroModel.id == id)
+                                        .options(selectinload(HeroModel.skills)))
     hero = result.scalar_one_or_none()
 
     return hero
@@ -157,7 +159,35 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
 
     return new_player
 
+@router.post("/setSkill", response_model=ReadPlayerSkill, status_code=201)
+async def set_player_skill(player_id: int, skill_id: int, db: AsyncSession = Depends(get_db)):
+    res = await db.execute(select(PlayerModel)
+                            .where(PlayerModel.id == player_id))
+    player = res.scalar_one_or_none()
 
+    res = await db.execute(select(SkillModel)
+                            .where(
+                                SkillModel.id == skill_id,
+                                SkillModel.hero_id == player.hero_id
+                            ))
+    skill = res.scalar_one_or_none()
+
+    if not skill:
+        raise HTTPException(status_code=404, detail="нет такой зависимости")
+
+
+
+    skill_player = PlayerAndSkill(
+            player_id=player.id,
+            skill_id = skill.id
+    )
+
+    db.add(skill_player)
+    await db.commit()
+    await db.refresh(skill_player)
+
+    return skill_player
+    
     
 @router.put("/updatePlayerLocation", response_model=ReadPlayer)
 async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):

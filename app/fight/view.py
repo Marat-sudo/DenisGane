@@ -8,7 +8,7 @@ import random
 from core.database import get_db
 from .models import *
 from app.player.models import *
-
+from app.player.shemas import Skills
 from .shemas import *
 
 router = APIRouter(prefix="/fight", tags=['fight'])
@@ -87,7 +87,7 @@ async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/fight/step")
-async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
+async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
                               .where(FightSession.id == session_id))
     session = result.scalar_one_or_none()
@@ -101,9 +101,66 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
                               .where(PlayerModel.id == session.attacker_id))
     attacker  = res.scalar_one_or_none()
 
+    res = await db.execute(select(PlayerSkillCooldown)
+                .where(
+                    PlayerSkillCooldown.fight_session_id == session_id,
+                    (PlayerSkillCooldown.player_id == attacker.id) |
+                    (PlayerSkillCooldown.player_id == opponent.id)
+                    ))
+    skillsCooldowns = res.scalars().all()
+    print("-" * 100)
+    print(skillsCooldowns)
     
+
+    return await step(
+                    session=session, 
+                    opponent=opponent, 
+                    attacker=attacker, 
+                    db=db,
+                    skill_id=skill_id)
+
+async def player_has_skill(player_id, skill_id):
+    res = await db.execute(select(PlayerAndSkill)
+                            .where(
+                                player_id=player_id,
+                                skill_id=skill_id
+                            ))
+    has = res.scalar_one_or_none()
+    print(has)
+    print("a" * 100)
+    return has
+
+async def step(session, opponent, attacker, db, skill_id=None):
+    damage = 0
+    type_act = "attack"
+    spent_mana = 0
+
+    attaking_id = attacker.id if session.attacker_turn else opponent.id
+    
+    if skill_id and not player_has_skill(attaking_id, skill_id):
+        raise HTTPException(status_code=404, detail="у данного игрока нет такого скила")
+
     if session.attacker_turn:
-        damage = attacker.attack - opponent.defense
+        if skill_id:
+            res = await db.execute(select(SkillModel)
+                                .where(SkillModel.id == skill_id))
+            skill = res.scalar_one_or_none()
+            if skill.skill_type == "damage":
+                damage = (attacker.attack * skill.damage_multiplier + skill.base_damage) - opponent.defense       
+                attacker.mana -= skill.mana_cost
+                type_act = "skill"
+                spent_mana = skill.mana_cost
+
+                await create_cooldown(
+                    session_id=session.id, 
+                    player_id=attacker.id, 
+                    skill_id=skill.id,
+                    _cooldown=skill.cooldown,
+                    db=db)
+
+        else:
+            damage = attacker.attack - opponent.defense
+                
 
         if damage < 0:
                 damage = 1
@@ -116,7 +173,7 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.winner_id = attacker.id
             newHP = 0
 
-            win = await FightModel(
+            win = FightModel(
                  winner_id=attacker.id,
                  loser_id=opponent.id
             )
@@ -135,17 +192,35 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
                         damage=damage, 
                         defHp=newHP,
                         attHp=session.attacker_current_hp,                            
-                        act_type="attack",
-                        skill_id=None,
-                        mana_spent=0,
+                        act_type=type_act,
+                        skill_id=skill_id,
+                        mana_spent=spent_mana,
                         is_critical=False)
     
     
     # атакует оппонент
     else:
-        
+        if skill_id:
+            res = await db.execute(select(SkillModel)
+                                .where(SkillModel.id == skill_id))
+            skill = res.scalar_one_or_none()
 
-        damage = opponent.attack - attacker.defense
+            if skill.skill_type == "damage":
+                damage = (opponent.attack * skill.damage_multiplier + skill.base_damage) - attacker.defense       
+                opponent.mana -= skill.mana_cost
+                type_act = "skill"
+                spent_mana = skill.mana_cost
+
+                await create_cooldown(
+                    session_id=session.id, 
+                    player_id=opponent.id, 
+                    skill_id=skill.id,
+                    _cooldown=skill.cooldown,
+                    db=db)
+            
+        else:
+            damage = opponent.attack - attacker.defense
+              
 
         if damage < 0:
                 damage = 1
@@ -159,7 +234,7 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
             session.winner_id = opponent.id
             newHP = 0
 
-            win = await FightModel(
+            win = FightModel(
                  winner_id=opponent.id,
                  loser_id=attacker.id
             )
@@ -179,48 +254,61 @@ async def fights_turn(session_id: int, db: AsyncSession = Depends(get_db)):
                         damage=damage, 
                         defHp=newHP,
                         attHp=session.opponent_current_hp,
-                        act_type="attack",
-                        skill_id=None,
-                        mana_spent=0,
+                        act_type = type_act,
+                        skill_id=skill_id,
+                        mana_spent=spent_mana,
                         is_critical=False)
             
         
 
             
     session.current_turn += 1
-    session.attacker_turn = not session.attacker_turn    
-    
-    
+    session.attacker_turn = not session.attacker_turn   
+
     db.add(log)
     await db.commit()
     await db.refresh(session)
-    await db.refresh(log)
+    await db.refresh(log) 
 
     return log
 
 
 
-@router.post("/steps/next", response_model=ListFightSteps)
-async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(FightLog)
-                              .where(FightLog.fight_session_id == fight_id))
-    s = result.scalars().all()
-
-    print(s)
-
-    return ListFightSteps(steps=s)
-
     
 @router.post("/session", response_model=ListFightSteps)
 async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
+    """Возвращает все ходы в активном файте"""
     result = await db.execute(select(FightLog)
                               .where(FightLog.fight_session_id == fight_id))
     s = result.scalars().all()
 
     return ListFightSteps(steps=s)
 
+# @router.post("/cooldown/create", response_model=ReadCooldown)
+async def create_cooldown(session_id: int, player_id: int, skill_id: int, _cooldown: int, db: AsyncSession):
+    cooldown = PlayerSkillCooldown(
+            fight_session_id=session_id,
+            player_id=player_id,
+            skill_id=skill_id,
+            turns_remaining =_cooldown
+    )
+    db.add(cooldown)
+    await db.commit()
+    await db.refresh(cooldown)
+
+    return cooldown
 
 
+@router.get("/cooldown/get", response_model=ReadCooldown)
+async def cooldowns(session_id: int, player_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerSkillCooldown)
+                                        .where(
+                                            PlayerSkillCooldown.fight_session_id == session_id,
+                                            PlayerSkillCooldown.player_id == player_id
+                                            ))
+    cooldown = result.scalar_one_or_none()
+
+    return cooldown
 
 async def createLog(
         attack: PlayerModel, 

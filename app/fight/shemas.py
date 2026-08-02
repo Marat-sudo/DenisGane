@@ -46,7 +46,6 @@ class choiceActiveFight(BaseModel):
 
 
 
-
 class choiceFightStep(BaseModel):
     id: int 
     fight_session_id: int
@@ -67,6 +66,25 @@ class ReadFightStep(choiceFightStep):
 
 class ListFightSteps(BaseModel):
     steps: List[ReadFightStep]
+
+
+class Cooldown(BaseModel):
+    id: int
+    fight_session_id: int
+    player_id: int
+    skill_id: int
+    turns_remaining: int
+
+    class Config:
+        from_attributes = True
+    
+
+class ReadCooldown(Cooldown):
+    id: int
+
+    class Config:
+        from_attributes = True
+    
 
 
 
