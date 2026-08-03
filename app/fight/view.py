@@ -107,10 +107,11 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                     (PlayerSkillCooldown.player_id == attacker.id) |
                     (PlayerSkillCooldown.player_id == opponent.id)
                     ))
+
     skillsCooldowns = res.scalars().all()
-    print("-" * 100)
-    print(skillsCooldowns)
     
+    if skillsCooldowns:
+        pass
 
     return await step(
                     session=session, 
@@ -119,15 +120,13 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                     db=db,
                     skill_id=skill_id)
 
-async def player_has_skill(player_id, skill_id):
+async def player_has_skill(player_id, skill_id, db):
     res = await db.execute(select(PlayerAndSkill)
                             .where(
-                                player_id=player_id,
-                                skill_id=skill_id
+                                PlayerAndSkill.player_id == player_id,
+                                PlayerAndSkill.skill_id ==skill_id
                             ))
     has = res.scalar_one_or_none()
-    print(has)
-    print("a" * 100)
     return has
 
 async def step(session, opponent, attacker, db, skill_id=None):
@@ -136,141 +135,167 @@ async def step(session, opponent, attacker, db, skill_id=None):
     spent_mana = 0
 
     attaking_id = attacker.id if session.attacker_turn else opponent.id
-    
-    if skill_id and not player_has_skill(attaking_id, skill_id):
+
+    if skill_id and not await player_has_skill(attaking_id, skill_id, db):
         raise HTTPException(status_code=404, detail="у данного игрока нет такого скила")
 
     if session.attacker_turn:
-        if skill_id:
-            res = await db.execute(select(SkillModel)
-                                .where(SkillModel.id == skill_id))
-            skill = res.scalar_one_or_none()
-            if skill.skill_type == "damage":
-                damage = (attacker.attack * skill.damage_multiplier + skill.base_damage) - opponent.defense       
-                attacker.mana -= skill.mana_cost
-                type_act = "skill"
-                spent_mana = skill.mana_cost
+        return await fight_players(
+            attacking=attacker,
+            defending=opponent,
+            session=session,
+            db=db,
+            skill_id=skill_id
+        )
+    else:
+        return await fight_players(
+            attacking=opponent,
+            defending=attacker,
+            session=session,
+            db=db,
+            skill_id=skill_id
+        )
 
-                await create_cooldown(
-                    session_id=session.id, 
-                    player_id=attacker.id, 
-                    skill_id=skill.id,
-                    _cooldown=skill.cooldown,
-                    db=db)
+    # if session.attacker_turn:
+    #     if skill_id:
+    #         res = await db.execute(select(SkillModel)
+    #                             .where(SkillModel.id == skill_id))
+    #         skill = res.scalar_one_or_none()
 
-        else:
-            damage = attacker.attack - opponent.defense
+    #         if session.attacker_mana < skill.mana_cost:
+    #             raise HTTPException(status_code=202, detail="недостаточно маны")
+
+
+    #         if skill.skill_type == "damage":
+    #             damage = (attacker.attack * skill.damage_multiplier + skill.base_damage) - opponent.defense       
+    #             attacker.mana -= skill.mana_cost
+    #             type_act = "skill"
+    #             spent_mana = skill.mana_cost
+
+    #             await create_cooldown(
+    #                 session_id=session.id, 
+    #                 player_id=attacker.id, 
+    #                 skill_id=skill.id,
+    #                 _cooldown=skill.cooldown,
+    #                 db=db)
+
+    #     else:
+    #         damage = attacker.attack - opponent.defense
                 
 
-        if damage < 0:
-                damage = 1
+    #     if damage < 0:
+    #             damage = 1
             
-        newHP = session.opponent_current_hp - damage
+    #     newHP = session.opponent_current_hp - damage
 
-        if newHP <= 0:
-            session.opponent_current_hp = 0
-            session.status = "finish"
-            session.winner_id = attacker.id
-            newHP = 0
+    #     if newHP <= 0:
+    #         session.opponent_current_hp = 0
+    #         session.status = "finish"
+    #         session.winner_id = attacker.id
+    #         newHP = 0
 
-            win = FightModel(
-                 winner_id=attacker.id,
-                 loser_id=opponent.id
-            )
+    #         win = FightModel(
+    #              winner_id=attacker.id,
+    #              loser_id=opponent.id
+    #         )
 
-            db.add(win)
-            await db.commit()
-            await db.refresh(session)
+    #         db.add(win)
+    #         await db.commit()
+    #         await db.refresh(session)
             
-            return win
+    #         return win
 
 
-        session.opponent_current_hp = newHP
-        log = await createLog(attack=attacker, 
-                        defender=opponent, 
-                        session=session, 
-                        damage=damage, 
-                        defHp=newHP,
-                        attHp=session.attacker_current_hp,                            
-                        act_type=type_act,
-                        skill_id=skill_id,
-                        mana_spent=spent_mana,
-                        is_critical=False)
+    #     session.opponent_current_hp = newHP
+    #     log = await createLog(attack=attacker, 
+    #                     defender=opponent, 
+    #                     session=session, 
+    #                     damage=damage, 
+    #                     defHp=newHP,
+    #                     attHp=session.attacker_current_hp,                            
+    #                     act_type=type_act,
+    #                     skill_id=skill_id,
+    #                     mana_spent=spent_mana,
+    #                     is_critical=False)
     
     
-    # атакует оппонент
-    else:
-        if skill_id:
-            res = await db.execute(select(SkillModel)
-                                .where(SkillModel.id == skill_id))
-            skill = res.scalar_one_or_none()
+    # # атакует оппонент
+    # else:
+    #     if skill_id:
+    #         res = await db.execute(select(SkillModel)
+    #                             .where(SkillModel.id == skill_id))
+    #         skill = res.scalar_one_or_none()
 
-            if skill.skill_type == "damage":
-                damage = (opponent.attack * skill.damage_multiplier + skill.base_damage) - attacker.defense       
-                opponent.mana -= skill.mana_cost
-                type_act = "skill"
-                spent_mana = skill.mana_cost
+    #         if session.opponent_mana < skill.mana_cost:
+    #             raise HTTPException(status_code=202, detail="недостаточно маны")
 
-                await create_cooldown(
-                    session_id=session.id, 
-                    player_id=opponent.id, 
-                    skill_id=skill.id,
-                    _cooldown=skill.cooldown,
-                    db=db)
+
+    #         if skill.skill_type == "damage":
+    #             damage = (opponent.attack * skill.damage_multiplier + skill.base_damage) - attacker.defense       
+    #             session.opponent_mana -= skill.mana_cost
+    #             type_act = "skill"
+    #             spent_mana = skill.mana_cost
+
+    #             await create_cooldown(
+    #                 session_id=session.id, 
+    #                 player_id=opponent.id, 
+    #                 skill_id=skill.id,
+    #                 _cooldown=skill.cooldown,
+    #                 db=db)
             
-        else:
-            damage = opponent.attack - attacker.defense
+    #     else:
+    #         damage = opponent.attack - attacker.defense
               
 
-        if damage < 0:
-                damage = 1
+    #     if damage < 0:
+    #             damage = 1
             
-        newHP = session.attacker_current_hp - damage
+    #     newHP = session.attacker_current_hp - damage
 
-        if newHP <= 0:
-            session.attacker_current_hp = 0
+    #     if newHP <= 0:
+    #         session.attacker_current_hp = 0
 
-            session.status = "finish"
-            session.winner_id = opponent.id
-            newHP = 0
+    #         session.status = "finish"
+    #         session.winner_id = opponent.id
+    #         newHP = 0
 
-            win = FightModel(
-                 winner_id=opponent.id,
-                 loser_id=attacker.id
-            )
+    #         win = FightModel(
+    #              winner_id=opponent.id,
+    #              loser_id=attacker.id
+    #         )
 
-            db.add(win)
-            await db.commit()
-            await db.refresh(session)
+    #         db.add(win)
+    #         await db.commit()
+    #         await db.refresh(session)
             
-            return win
+    #         return win
             
 
 
-        session.attacker_current_hp = newHP
-        log = await createLog(attack=opponent, 
-                        defender=attacker, 
-                        session=session, 
-                        damage=damage, 
-                        defHp=newHP,
-                        attHp=session.opponent_current_hp,
-                        act_type = type_act,
-                        skill_id=skill_id,
-                        mana_spent=spent_mana,
-                        is_critical=False)
+    #     session.attacker_current_hp = newHP
+    #     log = await createLog(attack=opponent, 
+    #                     defender=attacker, 
+    #                     session=session, 
+    #                     damage=damage, 
+    #                     defHp=newHP,
+    #                     attHp=session.opponent_current_hp,
+    #                     act_type = type_act,
+    #                     skill_id=skill_id,
+    #                     mana_spent=spent_mana,
+    #                     is_critical=False)
             
         
 
             
-    session.current_turn += 1
-    session.attacker_turn = not session.attacker_turn   
+    # session.current_turn += 1
+    # session.attacker_turn = not session.attacker_turn   
 
-    db.add(log)
-    await db.commit()
-    await db.refresh(session)
-    await db.refresh(log) 
+    # db.add(log)
+    # await db.commit()
+    # await db.refresh(session)
+    # await db.refresh(log) 
 
-    return log
+    # return log
 
 
 
@@ -283,6 +308,7 @@ async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
     s = result.scalars().all()
 
     return ListFightSteps(steps=s)
+
 
 # @router.post("/cooldown/create", response_model=ReadCooldown)
 async def create_cooldown(session_id: int, player_id: int, skill_id: int, _cooldown: int, db: AsyncSession):
@@ -339,7 +365,104 @@ async def createLog(
     return _log
 
     
+async def fight_players(attacking, defending, session, db, skill_id=None):
+    """Обработка всего и вся"""
+    damage = 0
+    type_act = "attack"
+    spent_mana = 0
 
+    defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
+
+    if skill_id:
+        res = await db.execute(select(SkillModel)
+                             .where(SkillModel.id == skill_id))
+        skill = res.scalar_one_or_none()
+
+        if defen_mana< skill.mana_cost:
+                raise HTTPException(status_code=202, detail="недостаточно маны")
+
+        if skill.skill_type == "damage":
+            damage = (attacking.attack * skill.damage_multiplier + skill.base_damage) - defending.defense       
+            if session.attacker_turn:
+                session.attacker_mana -= skill.mana_cost
+            else:
+                session.opponent_mana -= skill.mana_cost
+        
+            
+            type_act = "skill"
+            spent_mana = skill.mana_cost
+
+            await create_cooldown(
+                    session_id=session.id, 
+                    player_id=attacking.id, 
+                    skill_id=skill.id,
+                    _cooldown=skill.cooldown,
+                    db=db)
+            
+    else:
+        damage = attacking.attack - defending.defense
+              
+
+    if damage < 0:
+        damage = 1
+    
+
+    defend_hp = session.opponent_current_hp if session.attacker_turn else session.attacker_current_hp 
+    newHP = defend_hp - damage 
+
+    if newHP <= 0:
+
+        if session.attacker_turn:
+            session.opponent_current_hp = 0
+        else:
+            session.attacker_current_hp = 0
+        
+        session.status = "finish"
+        session.winner_id = attacking.id
+        newHP = 0
+
+        win = FightModel(
+                 winner_id=attacking.id,
+                 loser_id=defending.id
+            )
+
+        db.add(win)
+        await db.commit()
+        await db.refresh(session)
+        await db.refresh(attacking)
+        await db.refresh(defending)
+            
+        return win
+            
+
+    if session.attacker_turn:
+        session.opponent_current_hp = newHP
+    else:
+        session.attacker_current_hp = newHP
+        
+    log = await createLog(attack=attacking, 
+                        defender=defending, 
+                        session=session, 
+                        damage=damage, 
+                        defHp=newHP,
+                        attHp=defend_hp,
+                        act_type = type_act,
+                        skill_id=skill_id,
+                        mana_spent=spent_mana,
+                        is_critical=False)
+            
+        
+
+            
+    session.current_turn += 1
+    session.attacker_turn = not session.attacker_turn   
+
+    db.add(log)
+    await db.commit()
+    await db.refresh(session)
+    await db.refresh(log) 
+
+    return log
 
 
     

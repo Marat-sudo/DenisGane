@@ -188,6 +188,18 @@ async def set_player_skill(player_id: int, skill_id: int, db: AsyncSession = Dep
 
     return skill_player
     
+
+@router.put("/updateMana", response_model=ReadPlayer)
+async def update_location(id: int, mana: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id)) 
+    player = result.scalar_one_or_none()
+
+    player.mana = mana
+
+    await db.commit()
+    await db.refresh(player)
+
+    return player
     
 @router.put("/updatePlayerLocation", response_model=ReadPlayer)
 async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):

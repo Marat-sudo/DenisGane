@@ -75,10 +75,13 @@ class Player(BaseModel):
     user_id: int
     hero_id: int
     
+class Update_player_mana(BaseModel):
+    mana: int
 
 
 class ReadPlayer(Player):
     id: int
+    locations_id: int
     level: int
     exp: int
     
