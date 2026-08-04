@@ -3,8 +3,10 @@ from rich import print
 from rich.console import Console
 from rich.table import Table
 from rich import box
-
+from rich.layout import Layout
 from rich.panel import Panel
+
+from tools.rich.fight_menu 
 
 API_URL = "http://127.0.0.1:8000"
 USER_ID = None
@@ -50,7 +52,15 @@ def game():
             print("Нет персонажей")
 
 
+    def select_player(player_id: int):
+        response = requests.post(f"{API_URL}/user/info", json={"id": USER_ID})
+        data = response.json()
 
+        players = data["players"]
+
+        if player_id >= player_id or player_id < 0:
+            return -1 
+        return players[choise]["id"]
 
     def create_player():
         response = requests.post(f"{API_URL}/player/hero/list")
@@ -107,7 +117,7 @@ def game():
         table.add_column("минимальный уровень")
         table.add_column("номер")
     
-        print(data)
+        
         for loc in data["locations"]:
             table.add_row(loc["name"], loc["didescription"], str(loc["min_level"]), str(loc["id"]))
 
@@ -120,32 +130,35 @@ def game():
         response = requests.post(f"{API_URL}/player/update?id={PLAYER_ID}&loc_id={choise_loc}")
 
 
-        print(PLAYER_ID)
+
         response = requests.post(f"{API_URL}/fight/start?attacker_id={PLAYER_ID}")
         data = response.json()
+        # if data["detail"] == "вы уже находитесь в бою":
+        #     print("вы уже находитесь в бою")
+        #     return
 
-        if data["detail"]["winner"]["id"] == PLAYER_ID:
-            title = "[green][bold]Выигрыш[/bold][/green]"
-            color = "green"
-        else:
-            title = "[red][bold]Проигрыш[/bold][/red]"
-            color = "red"
+        # if data["detail"]["winner"]["id"] == PLAYER_ID:
+        #     title = "[green][bold]Выигрыш[/bold][/green]"
+        #     color = "green"
+        # else:
+        #     title = "[red][bold]Проигрыш[/bold][/red]"
+        #     color = "red"
 
-        detail = data["detail"]
-        mes = f"""
-        attacker: {detail["attacker"]["nickname"]} {detail["attacker"]["level"]}
-        opponent: {detail["opponent"]["nickname"]} {detail["opponent"]["level"]}
-        message: {detail["message"]}
-        """
-        res = Panel(mes, title=title, border_style=color)
-        # print(data)
-        print(res)
+        # detail = data["detail"]
+        # mes = f"""
+        # attacker: {detail["attacker"]["nickname"]} {detail["attacker"]["level"]}
+        # opponent: {detail["opponent"]["nickname"]} {detail["opponent"]["level"]}
+        # message: {detail["message"]}
+        # """
+        # res = Panel(mes, title=title, border_style=color)
+        # # print(data)
+        # print(res)
         
 
     def user_statistics():
         get_user_hero()
         choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = choise_id
+        PLAYER_ID = select_player(choise)
 
         response = requests.post(f"{API_URL}/fight/userList?id={PLAYER_ID}")
         res = response.json()
@@ -184,10 +197,10 @@ def game():
     def fight_step():
         get_user_hero()
         choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = choise_id
+        PLAYER_ID = select_player(choise_id)
 
  
-        response = requests.post(f"{API_URL}/fight/ActiveFight?player_id={PLAYER_ID}")
+        response = requests.get(f"{API_URL}/fight/ActiveFight?id={PLAYER_ID}")
         if response.status_code != 200:
             print("нет активных боёв")
             return
@@ -196,7 +209,7 @@ def game():
 
         print(data)
 
-        res = requests.post(f"{API_URL}/fight/session?fight_id={fight_id}")
+        res = requests.get(f"{API_URL}/fight/session/steps?fight_id={fight_id}")
         steps = res.json()
         print(steps)
         last_step = steps["steps"][-1]
@@ -211,24 +224,33 @@ def game():
 
         for step in steps["steps"]:
             print(step)
-            resPlayer = requests.post(f"{API_URL}/player/info?id={step["attacker_id"]}")
+            resPlayer = requests.get(f"{API_URL}/player/info?id={step["attacker_id"]}")
             player = resPlayer.json()
             
+            print("=" * 50)
+            print(player)
             table.add_row(player["nickname"], step["action_type"],str( step["damage_dealt"]), step["description"])
             table.add_section()
         print(table)
 
-        if last_step["attacker_id"] == PLAYER_ID:
-            print("вы ожидайете действия врага")
+        res = requests.get(f"{API_URL}/fight/session/info?fight_id={fight_id}")
+        session = res.json()
 
-        else:
-            # TODO тип действий тут
+        is_your_turn = (session["attacker_turn"] and session["attacker_id"] == PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == PLAYER_ID)
+         
+        if is_your_turn:
+            
+
             act_type = int(input("введите что-то"))
 
             resSession = requests.post(f"{API_URL}/fight/turn?session_id={fight_id}")
             session = res.json()
             # TODO я устал
             print("")
+        
+
+        else:
+            print("вы ожидайете действия врага")
 
 
         

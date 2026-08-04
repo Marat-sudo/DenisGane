@@ -1,28 +1,5 @@
-from rich.console import Console
-from rich.table import Table
-from rich import box
+from tools.rich.fight_menu import fight_menu
 
-console = Console()
 
-# 1. Создаем таблицу с закругленными границами (ROUNDED)
-# show_lines=True добавляет горизонтальные перегородки между строками
-table = Table(
-    show_header=False,
-    show_edge=True,
-    show_lines=True,
-    box=box.ROUNDED,
-    padding=(0, 1)  # отступы внутри секций (вертикальный, горизонтальный)
-)
+fight_menu(100, 100, 30, 90)
 
-# 2. Добавляем секции (строки)
-table.add_row("Короткая строка")
-table.add_row("Самая длинная строка в этом едином блоке")
-table.add_row("Ещё одна секция снизу")
-a = None
-
-if a:
-    print(2)
-else:
-    print(1)
-
-# console.print(table)

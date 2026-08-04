@@ -52,7 +52,7 @@ class choiceFightStep(BaseModel):
     turn_number: int
     attacker_id: int
     defender_id: int
-    damage_dealt: int
+    damage_dealt: float
 
     action_type: str
     description: str
@@ -77,7 +77,24 @@ class Cooldown(BaseModel):
 
     class Config:
         from_attributes = True
-    
+
+
+class ReadSession(BaseModel):
+    id: int
+    attacker_id: int
+    opponent_id: int
+    attacker_current_hp: float
+    opponent_current_hp: float
+    attacker_mana: int
+    opponent_mana: int
+
+    winner_id: Optional[int] = None
+
+    current_turn: int
+    attacker_turn: bool
+
+    status: str
+    created_at: datetime
 
 class ReadCooldown(Cooldown):
     id: int

@@ -21,8 +21,8 @@ class FightSession(Base):
     attacker_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
     opponent_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
 
-    attacker_current_hp: Mapped[int] = mapped_column(nullable=False)
-    opponent_current_hp: Mapped[int] = mapped_column(nullable=False)
+    attacker_current_hp: Mapped[float] = mapped_column(nullable=False)
+    opponent_current_hp: Mapped[float] = mapped_column(nullable=False)
     attacker_mana: Mapped[int]
     opponent_mana: Mapped[int]
 
