@@ -1,14 +1,15 @@
-from rich.table import Table
-from rich.panel import Panel
-from rich.columns import Columns
 from rich.align import Align
-from rich.text import Text
+from rich.columns import Columns
 from rich.console import Console, Group
-from rich.progress import Progress, BarColumn, MofNCompleteColumn, TextColumn
+from rich.panel import Panel
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn
+from rich.table import Table
+from rich.text import Text
+
 console = Console()
 
 
-def fight_menu(total_mana, total_hp, current_mana, current_hp):
+def fight_menu(total_mana, current_mana, total_hp, current_hp):
     buttons = [
         Panel("[1] обычная атака", padding=(0, 1)),
         Panel("[2] навыки", padding=(0, 1)),
@@ -20,6 +21,7 @@ def fight_menu(total_mana, total_hp, current_mana, current_hp):
         Columns(buttons, padding=1)
     )
 
+   
     progress = Progress(
         TextColumn("Мана"),
         BarColumn(bar_width=30, complete_style="blue", finished_style="blue"),
@@ -47,9 +49,11 @@ def fight_menu(total_mana, total_hp, current_mana, current_hp):
     )
 
 
-    console.print(Panel(
-        main_content,
-        width=80,
-        padding=(0, 1),
-        border_style="dim"))
+    console.print(
+        Panel(
+            main_content,
+            title="ваши действия",
+            width=80,
+            padding=(0, 1),
+            border_style="dim"))
 

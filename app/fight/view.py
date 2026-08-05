@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func, and_, or_
-from typing import List
-from sqlalchemy.orm import selectinload
 import random
+from typing import List
 
-from core.database import get_db
-from .models import *
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.player.models import *
-from app.player.shemas import Skills
+from core.database import get_db
+
+from .models import *
 from .shemas import *
 
 router = APIRouter(prefix="/fight", tags=['fight'])
@@ -158,16 +159,15 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
             if skill_id and skill_id == skillcd.skill_id and skillcd != 0:
                 raise HTTPException(status_code=203, detail="не прошло кд навыка")
 
+
+        cd_status = (session.attacker_turn and attacker.id == cd_skill.player_id) or (not session.attacker_turn and opponent.id == cd_skill.player_id)
         for cd_skill in skillsCooldowns:
-            if session.attacker_turn and attacker.id == cd_skill.player_id:
+            if cd_status:  
                 skillcd.turns_remaining -= 1
                 await db.commit()
                 await db.refresh(skillcd)
             
-            elif not session.attacker_turn and opponent.id == cd_skill.player_id:
-                skillcd.turns_remaining -= 1
-                await db.commit()
-                await db.refresh(skillcd)
+           
 
     return await step(
                     session=session, 

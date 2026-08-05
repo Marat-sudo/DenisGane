@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func, and_, or_
 from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.database import get_db
 from app.locations.models import LocationsModel
+from core.database import get_db
+
 from .models import *
 from .shemas import *
 
@@ -88,7 +90,7 @@ async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
     
 
 @router.get("/skills", response_model=SkillsList)
-async def info_player(id: int, db: AsyncSession = Depends(get_db)):
+async def player_skills(id: int, db: AsyncSession = Depends(get_db)):
     """Возвращает скилы пользователя"""
     result = await db.execute(select(SkillModel).where(SkillModel.hero_id == id))
     _skills = result.scalars().all()
@@ -202,7 +204,7 @@ async def update_location(id: int, mana: int, db: AsyncSession = Depends(get_db)
     return player
     
 @router.put("/updatePlayerLocation", response_model=ReadPlayer)
-async def update_location(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
+async def update_player_loc(id: int, loc_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id)) 
     player = result.scalar_one_or_none()
 

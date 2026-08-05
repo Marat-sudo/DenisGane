@@ -1,7 +1,10 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
 from app.player.shemas import ReadPlayer
+
 
 class Fight_player(BaseModel):
     id: int
@@ -56,6 +59,10 @@ class choiceFightStep(BaseModel):
 
     action_type: str
     description: str
+
+    skill_id: Optional[int] = None
+    mana_spent: int
+    is_critical: bool
 
     class Config:
         from_attributes = True

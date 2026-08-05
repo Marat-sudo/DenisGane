@@ -1,8 +1,11 @@
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
-from core.database import Base
-from sqlalchemy import ForeignKey
 from typing import List
+
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database import Base
+
 
 class FightModel(Base):
     __tablename__ = "fights"

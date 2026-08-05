@@ -84,6 +84,13 @@ class ReadPlayer(Player):
     locations_id: int
     level: int
     exp: int
+    mana: int
+    max_mana: int
+    max_hp: int
+    attack: int
+    defense: int
+    agility: int
+    crit_chance: float
     
 
 class ReadPlayerSkill(BaseModel):
