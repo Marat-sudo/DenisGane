@@ -57,3 +57,24 @@ def fight_menu(total_mana, current_mana, total_hp, current_hp):
             padding=(0, 1),
             border_style="dim"))
 
+
+def skill_menu(skills: list):
+    table = Table()
+    table.add_column("Название")
+    table.add_column("номер")
+    table.add_column("Тип")
+    table.add_column("урон")
+    table.add_column("увеличивает урон в Х раз")
+    table.add_column("требует маны")
+    table.add_column("откат в ходах")
+    table.add_column("описание")
+
+    for index, skill in enumerate(skills, start=1):
+        tp = skill["name"], index, skill["skill_type"], skill["base_damage"], str(skill["damage_multiplier"] * 100), skill["mana_cost"], skill["cooldown"], skill["description"]
+        strtp = tuple(str(x) for x in tp)
+
+        table.add_row(*strtp)
+        table.add_section()
+    
+    console.print(table)
+    

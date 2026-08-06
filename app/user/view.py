@@ -25,11 +25,11 @@ async def register_user(data: CreateUser, db: AsyncSession = Depends(get_db)):
     return new_user
     
 
-@router.post("/info", response_model=ReadUser)
-async def info_user(data: SearchUser, db: AsyncSession = Depends(get_db)):
+@router.get("/info", response_model=ReadUser)
+async def info_user(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(UserModel)
-        .where(UserModel.id == data.id)
+        .where(UserModel.id == id)
         .options(selectinload(UserModel.players))
         )
     

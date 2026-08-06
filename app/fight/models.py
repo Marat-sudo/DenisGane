@@ -50,7 +50,7 @@ class FightLog(Base):
     turn_number: Mapped[int]
     attacker_id: Mapped[int]
     defender_id: Mapped[int]
-    damage_dealt: Mapped[int]
+    damage_dealt: Mapped[float]
 
     action_type: Mapped[str]
     description: Mapped[str]
@@ -58,6 +58,7 @@ class FightLog(Base):
     skill_id: Mapped[int] = mapped_column(nullable=True)
     mana_spent: Mapped[int]
     is_critical: Mapped[bool]
+    crit_damage: Mapped[float]
 
 
     

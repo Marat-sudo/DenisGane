@@ -2,17 +2,55 @@ import tools.rich.game_menus as gm
 from rich.console import Console
 from rich.table import Table
 import time
-
-
 cs = Console()
-table = Table(title="asd", title_style="bright_cyan", style="cyan")
-table.add_column("атакующий")
-table.add_column("тип атаки")
-table.add_column("всего нанёс урона")
-table.add_column("описание")
-cs.print("[blink]123[/blink]\n[italic]123[/italic]")
 
-table.add_row("1", "2","3", "4")
 
-cs.print(table)
+def skill_menu(skills):
+    table = Table()
+    table.add_column("Название")
+    table.add_column("номер")
+    table.add_column("Тип")
+    table.add_column("урон")
+    table.add_column("увеличивает урон в Х раз")
+    table.add_column("требует маны")
+    table.add_column("откат в ходах")
+    table.add_column("описание")
+
+    for index, skill in enumerate(skills, start=1):
+        tp = skill["name"], index, skill["skill_type"], skill["base_damage"], str(skill["damage_multiplier"] * 100), skill["mana_cost"], skill["cooldown"], skill["description"]
+        strtp = tuple(str(x) for x in tp)
+
+        table.add_row(*strtp)
+        table.add_section()
     
+    cs.print(table)
+    
+    
+a = {"skills": [
+    {
+      "name": "firebool",
+      "hero_id": 1,
+      "damage_multiplier": 1.2,
+      "base_damage": 20,
+      "mana_cost": 60,
+      "cooldown": 4,
+      "skill_type": "damage",
+      "description": "наносит горящий bool урон",
+      "id": 1
+    },
+
+    {
+      "name": "острый меч",
+      "hero_id": 2,
+      "damage_multiplier": 1.5,
+      "base_damage": 10,
+      "mana_cost": 5,
+      "cooldown": 3,
+      "skill_type": "damage",
+      "description": "заостряет меч на один удар",
+      "id": 2
+    }
+  ]
+}
+
+skill_menu(a["skills"])

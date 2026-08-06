@@ -24,10 +24,8 @@ class PlayerModel(Base):
     attack: Mapped[int] = mapped_column(nullable=False)
     defense: Mapped[int] = mapped_column(nullable=False)
     agility: Mapped[int] = mapped_column(nullable=False)
-    crit_chance: Mapped[float] = mapped_column(default=5.0)
-
-
-
+    crit_chance: Mapped[float]
+    crit_multiplier: Mapped[float]
     
     locations: Mapped["LocationsModel"] = relationship("LocationsModel", back_populates="players")
     users : Mapped[List["UserModel"]] = relationship("UserModel", back_populates="players")
@@ -54,7 +52,8 @@ class HeroModel(Base):
 
     skills: Mapped[List["SkillModel"]] = relationship("SkillModel", back_populates="hero")
     players: Mapped[List["PlayerModel"]] = relationship("PlayerModel", back_populates="hero")
-
+    base_crit_chance: Mapped[float] = mapped_column(default=5.0)
+    base_crit_multiplier: Mapped[float] = mapped_column(default=1.5)
 
 class SkillModel(Base):
 

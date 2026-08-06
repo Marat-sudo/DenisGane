@@ -1,6 +1,7 @@
 from rich import box
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 
 console = Console()
 
@@ -106,33 +107,25 @@ def player_steps(steps: list, att_player: dict, def_player: dict):
     console.print(table)
 
 
-def step_last(step: dict, att_player: dict, def_player: dict, title: str, title_style, table_style):
+def step_last(step: dict, title_style: str, border_style: str):
     """
     при крит ударе
     red1 - для заголовка
-    dark_red - для таблицы 
+    dark_red - для рамки 
 
     если не крит урон
-    red3 - для таблицы и заголовка
+    red3 - для рамки и заголовка
 
     уворот 
     bright_cyan - заголовок
-    cyan - таблицы
+    cyan - рамки
     """
+    Panel = Panel(
+        step["description"],
+        expand=False,
+        style=title_style,
+        border_style=border_style
+    )
     
     
-    table = Table(title=title, title_style=title_style, style=table_style)
-    table.add_column("атакующий")
-    table.add_column("тип атаки")
-    table.add_column("всего нанёс урона")
-    table.add_column("описание")
-
-
-    if step["attacker_id"] == att_player["id"]:
-        player = att_player
-    else:
-        player = def_player
-
-    table.add_row(player["nickname"], step["action_type"],str( step["damage_dealt"]), step["description"])
-    
-    console.print(table)
+    console.print(Panel)

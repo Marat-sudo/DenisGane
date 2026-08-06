@@ -2,37 +2,80 @@ import requests
 from rich import print
 from rich.table import Table
 
+import tools.requests_funs.querys as qu
 import tools.rich.game_menus as gm
 import tools.rich.print_info as pf
 
 API_URL = "http://127.0.0.1:8000"
 USER_ID = None
 PLAYER_ID = None
-TABLE_STEP_COLORS = {
+STEP_COLORS = {
     "крит урон": {
         "text": "Нанесён критический урон",
         "title": "red1",
-        "table": "dark_red"
+        "border": "dark_red"
     },
     "обычный урон": {
         "text": "Нанесён урон",
         "title": "red3",
-        "table": "red3"
+        "border": "red3"
     },
     "уворот": {
         "text": "Вы увернулись и не получили урон",
         "title": "bright_cyan",
-        "table": "cyan"
+        "border": "cyan"
     }
 }
+
+def fight(max_mana: int, cur_mana: int, max_hp: int, cur_hp: int, skills: list):
+        while True:
+            gm.fight_menu(
+                    max_mana,
+                    cur_mana,
+                    max_hp,
+                    cur_hp
+                )
+
+            choise = int(input("действие: "))
+            
+            if choise not in (1, 2):
+                print("неверный ввод")
+                continue
+
+            if choise == 2:
+                print("0 - вернуться назад")
+                sk = select_skill(skills)
+            
+            if sk:
+                return choise, sk
+
+
+            return choise, None
+
+
+def select_skill(skills: list):
+    while True:
+        gm.skill_menu(
+                skills
+            )
+
+        choise = int(input("действие: "))
+            
+        if choise > len(skills):
+            print("неверный ввод")
+            continue
+
+        if choise != 0 :
+            return skills[choise - 1]
+            
+        return None
 
 
 def game():
     global USER_ID 
     
     def get_user_hero():
-        response = requests.post(f"{API_URL}/user/info", json={"id": USER_ID})
-        data = response.json()
+        data = qu.get_user_info(USER_ID)
 
         players = data["players"]
 
@@ -45,8 +88,7 @@ def game():
 
 
     def select_player(player_id: int):
-        response = requests.post(f"{API_URL}/user/info", json={"id": USER_ID})
-        data = response.json()
+        data = qu.get_user_info(USER_ID)
 
         players = data["players"]
     
@@ -56,8 +98,7 @@ def game():
         return players[player_id -1]["id"]
 
     def create_player():
-        response = requests.get(f"{API_URL}/player/hero/list")
-        data = response.json()
+        data = qu.get_heroes()
         heroes = data["heroes"]
         
         pf.all_heroes(heroes)
@@ -72,7 +113,7 @@ def game():
             "user_id" : USER_ID
         }
 
-        response = requests.post(f"{API_URL}/player/create", json=data)
+        response = qu.post_create_player(data)
         if response.status_code == 201:
             print(f"Ваш персонаж {nickname} : {heroes[choise]["name"]} успено создан")
 
@@ -84,19 +125,49 @@ def game():
         PLAYER_ID = choise_id
 
 
-        response = requests.post(f"{API_URL}/locations/list")
-        data = response.json()
+        
+        data = qu.get_locations()
 
         pf.all_locations(data["locations"])
         
-        choise_loc = int(input("выберите локацию: "))
+        choise_loc = int(input("введите номер локации, 0 - остаться на прежней\nвыберите локацию: "))
 
-        response = requests.post(f"{API_URL}/player/update?id={PLAYER_ID}&loc_id={choise_loc}")
+        if choise_loc != 0:
+            qu.put_update_player_loc(PLAYER_ID, choise_loc)
+        
+        qu.post_start_fight(PLAYER_ID)
 
 
-
-        response = requests.post(f"{API_URL}/fight/start?attacker_id={PLAYER_ID}")
+        response = qu.get_player_active_fight(PLAYER_ID)
+        if response.status_code != 200:
+            print("какая-то ошибка")
+            return
         data = response.json()
+        fight_id = data["id"]
+        session = qu.get_session_info(fight_id)
+
+        player = qu.get_player_info(session[str(PLAYER_ID)])
+
+        act_type, skill = fight(
+            max_mana=player["max_mana"],
+            cur_mana=session["attacker_mana"],
+            max_hp=player["max_hp"],
+            cur_hp=session["attacker_current_hp"]    
+        )
+
+        skills = qu.get_player_skills(PLAYER_ID)["skills"]
+
+
+        match act_type:
+            case 1:
+                qu.post_fight_step(session["id"])
+            case 2:
+                qu.post_fight_step(session["id"], skill["id"])
+                
+                
+                
+    
+
         # if data["detail"] == "вы уже находитесь в бою":
         #     print("вы уже находитесь в бою")
         #     return
@@ -124,8 +195,8 @@ def game():
         choise_id = int(input("выберите своего героя из спика: "))
         PLAYER_ID = select_player(choise_id)
 
-        response = requests.post(f"{API_URL}/fight/history?id={PLAYER_ID}")
-        res = response.json()
+        
+        res = qu.get_player_fight_history(PLAYER_ID)
         
         data = res["fights"]
 
@@ -143,7 +214,7 @@ def game():
         PLAYER_ID = select_player(choise_id)
         
  
-        response = requests.get(f"{API_URL}/fight/ActiveFight?id={PLAYER_ID}")
+        response = qu.get_player_active_fight(PLAYER_ID)
         if response.status_code != 200:
             print("нет активных боёв")
             return
@@ -151,23 +222,17 @@ def game():
         fight_id = data["id"]
 
         
+        steps = qu.get_session_steps(fight_id)
 
-        res = requests.get(f"{API_URL}/fight/session/steps?fight_id={fight_id}")
-        steps = res.json()
+        print(steps)
         last_step = steps["steps"][-1]
         
 
+        session = qu.get_session_info(fight_id)
 
-        resSession = requests.get(f"{API_URL}/fight/session/info?fight_id={fight_id}")
-        session = resSession.json()
+        att_player = qu.get_player_info(session["attacker_id"])
 
-
-
-        resPlayer = requests.get(f"{API_URL}/player/info?id={session["attacker_id"]}")
-        att_player = resPlayer.json()
-
-        resPlayer = requests.get(f"{API_URL}/player/info?id={session["opponent_id"]}")
-        def_player = resPlayer.json()
+        def_player = qu.get_player_info(session["opponent_id"])
         
 
         
@@ -187,30 +252,28 @@ def game():
             player_current_hp = session["opponent_current_hp"]
 
         is_your_turn = (session["attacker_turn"] and session["attacker_id"] == PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == PLAYER_ID)
-        step_color = TABLE_STEP_COLORS["крит урон"] if last_step["is_critical"] else TABLE_STEP_COLORS["обычный урон"]
+        step_color = STEP_COLORS["крит урон"] if last_step["is_critical"] else STEP_COLORS["обычный урон"]
         
         if is_your_turn:
             print("\n")
             pf.step_last(
                 step=last_step,
-                att_player=att_player,
-                def_player=def_player,
-                title="Нанесён урон",
+                title=step_color["text"],
                 title_style=step_color["title"],
-                table_style=step_color["table"]
+                border_style=step_color["border"]
             )
 
 
             print("\n")
-            gm.fight_menu(
-                player_total_mana,
-                player_current_mana,
-                player_total_hp,
-                player_current_hp
-            )
+            act_type = fight(
+                max_mana=player_total_mana,
+                cur_mana=player_current_mana,
+                max_hp=player_total_hp,
+                cur_hp=player_current_hp    
+                )
+    
 
-            act_type = int(input("введите что-то "))
-
+            
             
             # TODO я устал
             print("")
@@ -251,8 +314,8 @@ def login():
     password = input("введите password: ").strip()
 
 
-
-    response = requests.post(f"{API_URL}/user/login", json={"username": username, "password": password})
+    
+    response = qu.post_login(data={"username": username, "password": password}) 
     if (response.status_code == 200):
         data = response.json()
         USER_ID = data["id"]
@@ -262,12 +325,14 @@ def login():
     else:
         print(response.content)
     
+
 def register():
     global USER_ID
     username = input("Введите имя: ").strip()
     password = input("Введите пароль: ").strip()
     data = {"username": username, "password": password}
-    response = requests.post(f"{API_URL}/user/register", json=data)
+
+    response = qu.post_register(data)
     print(response.content)
 
     if (response.status_code == 201):

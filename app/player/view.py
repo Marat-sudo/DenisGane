@@ -135,7 +135,9 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
         defense = hero.base_defense,
         agility = hero.base_agility,
         mana = hero.base_mana,
-        max_mana = hero.base_mana)
+        max_mana = hero.base_mana,
+        crit_chance= hero.base_crit_chance,
+        crit_multiplier=hero.base_crit_multiplier)
     
 
 
@@ -154,14 +156,40 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
         # INSERT INTO playerandskills (player_id, skill_id)
         # VALUES (1, 2)
 
-        new_ps = playerAndSkill(player_id = new_player.id, skill_id = skill.id)
+        new_ps = PlayerAndSkill(player_id = new_player.id, skill_id = skill.id)
         db.add(new_ps)
         await db.commit()
+        await db.refresh(new_ps)
 
 
     return new_player
 
-@router.post("/setSkill", response_model=ReadPlayerSkill, status_code=201)
+@router.put("/update", response_model=ReadPlayer)
+async def update_player(id: int, data: UpdatePlayer, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id)) 
+    player = result.scalar_one_or_none()
+
+     
+    player.nickname=data.nickname
+    player.hero_id=player.hero_id
+    player.user_id=player.user_id
+    player.locations_id = player.locations_id
+    player.max_hp = data.base_hp
+    player.attack = data.base_attack
+    player.defense = data.base_defense
+    player.agility = data.base_agility
+    player.mana = data.base_mana
+    player.max_mana = data.base_mana
+    player.crit_chance= data.base_crit_chance
+    player.crit_multiplier=data.base_crit_multiplier
+
+    await db.commit()
+    await db.refresh(player)
+
+    return player
+
+
+@router.put("/setSkill", response_model=ReadPlayerSkill, status_code=201)
 async def set_player_skill(player_id: int, skill_id: int, db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(PlayerModel)
                             .where(PlayerModel.id == player_id))

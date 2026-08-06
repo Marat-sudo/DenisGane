@@ -75,7 +75,7 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
     return HTTPException(status_code=200, detail=session)
 
 
-@router.post("/history", response_model=ListFights)
+@router.get("/history", response_model=ListFights)
 async def fights_list(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightModel)
                               .where(
@@ -160,8 +160,8 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                 raise HTTPException(status_code=203, detail="не прошло кд навыка")
 
 
-        cd_status = (session.attacker_turn and attacker.id == cd_skill.player_id) or (not session.attacker_turn and opponent.id == cd_skill.player_id)
         for cd_skill in skillsCooldowns:
+            cd_status = (session.attacker_turn and attacker.id == cd_skill.player_id) or (not session.attacker_turn and opponent.id == cd_skill.player_id)
             if cd_status:  
                 skillcd.turns_remaining -= 1
                 await db.commit()
@@ -186,9 +186,6 @@ async def player_has_skill(player_id, skill_id, db):
     return has
 
 async def step(session, opponent, attacker, db, skill_id=None):
-    
-
-   
     
     if session.attacker_turn:
         return await fight_players(
@@ -258,14 +255,21 @@ async def createLog(
         attack: PlayerModel, 
         defender: PlayerModel,
         session: FightSession,
-        damage: int,
-        defHp: int,
-        attHp: int,
+        damage: float,
+        defHp: float,
+        attHp: float,
         act_type: str,
         skill_id: int,
         mana_spent: int,
-        is_critical: bool) -> FightLog:
+        is_critical: bool,
+        crit_damage: float) -> FightLog:
     
+
+    if is_critical:
+        descript = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} крит урона, понизив хп провивника до {defHp} HP"
+    else:     
+        descript = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона, понизив хп провивника до {defHp} HP"
+        
     _log = FightLog(
         fight_session_id = session.id,
         turn_number = session.current_turn,
@@ -274,20 +278,25 @@ async def createLog(
         damage_dealt = damage,
 
         action_type = act_type,
-        description = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона до {defHp} HP",
-        
+        description = descript,
         skill_id = skill_id,
         mana_spent = mana_spent,
-        is_critical = is_critical
+        is_critical = is_critical,
+        crit_damage=crit_damage
         )
     return _log
 
     
 async def fight_players(attacking, defending, session, db, skill_id=None):
     """Обработка всего и вся"""
-    damage = 0
+    damage = attacking.attack - defending.defense
     type_act = "attack"
     spent_mana = 0
+    is_crit = False
+    crit_dam = 0.0
+
+    if damage <= 0:
+        damage = 1
 
     defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
 
@@ -297,7 +306,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         skill = res.scalar_one_or_none()
 
         if defen_mana< skill.mana_cost:
-                raise HTTPException(status_code=202, detail="недостаточно маны")
+                raise HTTPException(status_code=200, detail="недостаточно маны")
 
         if skill.skill_type == "damage":
             damage = (attacking.attack * skill.damage_multiplier + skill.base_damage) - defending.defense       
@@ -316,28 +325,28 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                     skill_id=skill.id,
                     _cooldown=skill.cooldown,
                     db=db)
-            
-    else:
-        damage = attacking.attack - defending.defense
-              
-
-    if damage < 0:
-        damage = 1
     
+    if attacking.crit_chance >= random.randint(0, 100):
+        damage = damage * attacking.crit_multiplier 
+        crit_dam = round(damage, 2)
+        is_crit = True       
 
+    
+    
+    damage = round(damage, 2)
     defend_hp = session.opponent_current_hp if session.attacker_turn else session.attacker_current_hp 
     newHP = defend_hp - damage 
-
+    newHP = round(newHP, 2)
     if newHP <= 0:
 
         if session.attacker_turn:
-            session.opponent_current_hp = 0
+            session.opponent_current_hp = 0.0
         else:
-            session.attacker_current_hp = 0
+            session.attacker_current_hp = 0.0
         
         session.status = "finish"
         session.winner_id = attacking.id
-        newHP = 0
+        newHP = 0.0
 
         win = FightModel(
                  winner_id=attacking.id,
@@ -359,7 +368,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     else:
         session.attacker_current_hp = newHP
         att_hp = session.opponent_current_hp
-        
+    
+    print("=" * 50)
+    print(is_crit)
     log = await createLog(attack=attacking, 
                         defender=defending, 
                         session=session, 
@@ -369,7 +380,8 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         act_type = type_act,
                         skill_id=skill_id,
                         mana_spent=spent_mana,
-                        is_critical=False)
+                        is_critical=is_crit,
+                        crit_damage=crit_dam)
             
         
 

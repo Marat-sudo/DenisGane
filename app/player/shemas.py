@@ -9,6 +9,9 @@ class Hero(BaseModel):
     base_defense: int
     base_agility: int
     base_mana: int
+
+    base_crit_chance: float
+    base_crit_multiplier: float
     
     class Config:
         from_attributes=True
@@ -39,7 +42,7 @@ class SkillCooldown(BaseModel):
         from_attributes = True
 
 class Skills(BaseModel):
-    id: int
+    """skill_type: str - тип навыка ("damage", "heal", "buff", "debuff") """
     name: str
     hero_id: int
     damage_multiplier: float
@@ -91,7 +94,19 @@ class ReadPlayer(Player):
     defense: int
     agility: int
     crit_chance: float
+    crit_multiplier: float
     
+
+class UpdatePlayer(BaseModel):
+    nickname: str
+    base_hp: int 
+    base_attack: int
+    base_defense: int
+    base_agility: int
+    base_mana: int
+    base_crit_chance: float
+    base_crit_multiplier: float
+
 
 class ReadPlayerSkill(BaseModel):
     id: int

@@ -38,7 +38,7 @@ async def register_Locations(data: CreateLocation, db: AsyncSession = Depends(ge
     
 
 
-@router.post("/info", response_model=ReadLocation)
+@router.get("/info", response_model=ReadLocation)
 async def info_Locations(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LocationsModel).where(LocationsModel.id == id))
     locations = result.scalar_one_or_none()
@@ -64,7 +64,7 @@ async def update_locations(id: int, data:UpdateLocation, db: AsyncSession = Depe
     return locations
 
 
-@router.post("/list", response_model=LocationList)
+@router.get("/list", response_model=LocationList)
 async def locations_list(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(LocationsModel))
     locations = result.scalars().all()
@@ -97,7 +97,7 @@ async def register_products(data: CreateProduct, db: AsyncSession = Depends(get_
     
 
 
-@router.post("/products/info", response_model=ReadProducts)
+@router.get("/products/info", response_model=ReadProducts)
 async def info_products(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ProductsModel).where(ProductsModel.id == id))
     locations = result.scalar_one_or_none()
@@ -145,7 +145,7 @@ async def register_store(data: CreateStore, db: AsyncSession = Depends(get_db)):
     
 
 
-@router.post("/store/info", response_model=ReadStore)
+@router.get("/store/info", response_model=ReadStore)
 async def info_store(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(StoreModel).where(StoreModel.id == id))
     store = result.scalar_one_or_none()
