@@ -170,10 +170,7 @@ async def update_player(id: int, data: UpdatePlayer, db: AsyncSession = Depends(
     player = result.scalar_one_or_none()
 
      
-    player.nickname=data.nickname
-    player.hero_id=player.hero_id
-    player.user_id=player.user_id
-    player.locations_id = player.locations_id
+
     player.max_hp = data.base_hp
     player.attack = data.base_attack
     player.defense = data.base_defense
@@ -252,3 +249,16 @@ async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     return player
 
 
+@router.get("/combat-stats", response_model=StatsPlayer)
+async def stats_player(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
+    player = result.scalar_one_or_none()
+
+   
+    dodge_chance = min(50, player.agility / 2)
+
+    player.dodge_chance = dodge_chance
+
+    stats = StatsPlayer.model_validate(player, from_attributes=True)
+
+    return stats

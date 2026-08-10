@@ -107,7 +107,7 @@ def player_steps(steps: list, att_player: dict, def_player: dict):
     console.print(table)
 
 
-def step_last(step: dict, title_style: str, border_style: str):
+def step_last(step: dict, title: str, title_style: str, border_style: str):
     """
     при крит ударе
     red1 - для заголовка
@@ -120,12 +120,12 @@ def step_last(step: dict, title_style: str, border_style: str):
     bright_cyan - заголовок
     cyan - рамки
     """
-    Panel = Panel(
-        step["description"],
-        expand=False,
+    panel = Panel(
+        title,
+        width=80,
         style=title_style,
         border_style=border_style
     )
     
     
-    console.print(Panel)
+    console.print(panel)

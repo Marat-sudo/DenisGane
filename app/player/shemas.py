@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 
@@ -96,9 +96,19 @@ class ReadPlayer(Player):
     crit_chance: float
     crit_multiplier: float
     
+class StatsPlayer(BaseModel):
+    max_mana: int
+    max_hp: int
+    attack: int
+    defense: int
+    agility: int
+    crit_chance: float
+    crit_multiplier: float
+    dodge_chance: float
 
+    model_config = ConfigDict(from_attributes=True)
+    
 class UpdatePlayer(BaseModel):
-    nickname: str
     base_hp: int 
     base_attack: int
     base_defense: int

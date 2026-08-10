@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.player.models import *
 from core.database import get_db
-
+from tools.requests_funs.querys import get_player_skills
 from .models import *
 from .shemas import *
 
@@ -125,9 +125,14 @@ async def update_mana_in_fight(session_id: int, player_id: int,mana: int, db: As
 @router.post("/step")
 async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
-                              .where(FightSession.id == session_id))
+                              .where(
+                                    FightSession.id == session_id,
+                                    FightSession.status == "active"
+                                ))
     session = result.scalar_one_or_none()
-
+  
+    if not session:
+        raise HTTPException(status_code=404, detail=f"нет данной активной сессии")
 
     res = await db.execute(select(PlayerModel)
                               .where(PlayerModel.id == session.opponent_id))
@@ -262,11 +267,21 @@ async def createLog(
         skill_id: int,
         mana_spent: int,
         is_critical: bool,
-        crit_damage: float) -> FightLog:
+        crit_damage: float,
+        was_dodged: bool,
+        dodge_chance_rolled: float) -> FightLog:
     
 
     if is_critical:
         descript = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} крит урона, понизив хп провивника до {defHp} HP"
+    elif was_dodged:
+        
+        descript = f"{defender.nickname} {defHp} уклонился от атаки {attack.nickname} {attHp} и не получил урон HP"
+    elif skill_id:
+        skill = get_player_skills(skill_id)
+
+        descript =f"{attack.nickname} ({attHp} HP) {skill["description"]} {defender.nickname} {damage}, понизив хп провивника до {defHp} HP"
+    
     else:     
         descript = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} урона, понизив хп провивника до {defHp} HP"
         
@@ -282,7 +297,10 @@ async def createLog(
         skill_id = skill_id,
         mana_spent = mana_spent,
         is_critical = is_critical,
-        crit_damage=crit_damage
+        crit_damage=crit_damage,
+
+        was_dodged=was_dodged,
+        dodge_chance_rolled=dodge_chance_rolled
         )
     return _log
 
@@ -294,6 +312,46 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     spent_mana = 0
     is_crit = False
     crit_dam = 0.0
+
+
+    dodge_chance = min(50, defending.agility / 2)
+
+    
+    
+    if dodge_chance > random.randint(0, 100):
+    
+        if session.attacker_turn:
+            ahp = session.attacker_current_hp
+            dhp = session.opponent_current_hp
+        else:
+            ahp = session.opponent_current_hp
+            dhp = session.attacker_current_hp
+
+        log = await createLog(attack=attacking, 
+                        defender=defending, 
+                        session=session, 
+                        damage=damage, 
+                        defHp=dhp,
+                        attHp=ahp,
+                        act_type = "dodge",
+                        skill_id=None,
+                        mana_spent=spent_mana,
+                        is_critical=is_crit,
+                        crit_damage=crit_dam,
+                        was_dodged=True,
+                        dodge_chance_rolled=dodge_chance)
+        
+        session.current_turn += 1
+        session.attacker_turn = not session.attacker_turn   
+
+        db.add(log)
+        await db.commit()
+        await db.refresh(session)
+        await db.refresh(log) 
+
+        return log
+        
+
 
     if damage <= 0:
         damage = 1
@@ -359,7 +417,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         await db.refresh(attacking)
         await db.refresh(defending)
             
-        return win
+        
             
 
     if session.attacker_turn:
@@ -369,8 +427,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         session.attacker_current_hp = newHP
         att_hp = session.opponent_current_hp
     
-    print("=" * 50)
-    print(is_crit)
+
     log = await createLog(attack=attacking, 
                         defender=defending, 
                         session=session, 
@@ -381,7 +438,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         skill_id=skill_id,
                         mana_spent=spent_mana,
                         is_critical=is_crit,
-                        crit_damage=crit_dam)
+                        crit_damage=crit_dam,
+                        was_dodged=False,
+                        dodge_chance_rolled=dodge_chance)
             
         
 

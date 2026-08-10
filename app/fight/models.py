@@ -60,6 +60,9 @@ class FightLog(Base):
     is_critical: Mapped[bool]
     crit_damage: Mapped[float]
 
+    was_dodged: Mapped[bool]
+    dodge_chance_rolled: Mapped[float]
+
 
     
 class PlayerSkillCooldown(Base):

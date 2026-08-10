@@ -41,16 +41,19 @@ def fight(max_mana: int, cur_mana: int, max_hp: int, cur_hp: int, skills: list):
             if choise not in (1, 2):
                 print("неверный ввод")
                 continue
+            
+            if choise == 1:
+                break
 
             if choise == 2:
                 print("0 - вернуться назад")
                 sk = select_skill(skills)
             
-            if sk:
+            if sk and sk != 0:
                 return choise, sk
 
 
-            return choise, None
+        return choise, None
 
 
 def select_skill(skills: list):
@@ -252,7 +255,13 @@ def game():
             player_current_hp = session["opponent_current_hp"]
 
         is_your_turn = (session["attacker_turn"] and session["attacker_id"] == PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == PLAYER_ID)
-        step_color = STEP_COLORS["крит урон"] if last_step["is_critical"] else STEP_COLORS["обычный урон"]
+        
+        if last_step["is_critical"]:
+            step_color = STEP_COLORS["крит урон"]
+        elif last_step["action_type"] == "dodge":
+            step_color = STEP_COLORS["уворот"]
+        else:
+            step_color = STEP_COLORS["обычный урон"]
         
         if is_your_turn:
             print("\n")
@@ -269,7 +278,8 @@ def game():
                 max_mana=player_total_mana,
                 cur_mana=player_current_mana,
                 max_hp=player_total_hp,
-                cur_hp=player_current_hp    
+                cur_hp=player_current_hp,
+                skills = []  
                 )
     
 
