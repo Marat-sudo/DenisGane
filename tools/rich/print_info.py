@@ -3,6 +3,8 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
+import tools.requests_funs.querys as qu
+
 console = Console()
 
 
@@ -120,6 +122,9 @@ def step_last(step: dict, title: str, title_style: str, border_style: str):
     bright_cyan - заголовок
     cyan - рамки
     """
+
+    if step["combo_count"] >= 3:
+        title = title + f"\nТекущие комбо: {step["combo_count"]}, умножитель урона: {step["combo_bonus_damage"]}%"
     panel = Panel(
         title,
         width=80,
@@ -129,3 +134,30 @@ def step_last(step: dict, title: str, title_style: str, border_style: str):
     
     
     console.print(panel)
+
+
+def fight_end(session, player_id):
+    if session["winner_id"] == player_id:
+        op_id = session["attacker_id"] if session["attacker_id"] != player_id else session["opponent_id"]
+        opponent = qu.get_player_info(op_id)
+        
+        title = f"Вы одолели {opponent["nickname"]} {opponent["level"]} уровня" 
+
+        title_style = "spring_green3"
+
+        border_style = "green"
+    else:
+        op_id = session["attacker_id"] if session["attacker_id"] != player_id else session["opponent_id"]
+        opponent = qu.get_player_info(op_id)
+        
+        title = f"Вы проиграли {opponent["nickname"]} {opponent["level"]} уровня" 
+
+        title_style = "bright_red"
+
+        border_style = "red1"
+    panel = Panel(
+        title,
+        width=80,
+        style=title_style,
+        border_style=border_style
+    )

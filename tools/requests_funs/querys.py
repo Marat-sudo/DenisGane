@@ -101,7 +101,11 @@ def post_register(data: dict):
 
 
 def post_fight_step(session_id: int, skill_id:int = None):
-    response = requests.post(f"{API_URL}/fight/step?session_id={session_id}&skill_id={skill_id}")
+    if skill_id:
+        response = requests.post(f"{API_URL}/fight/step?session_id={session_id}&skill_id={skill_id}")
+    else:
+        response = requests.post(f"{API_URL}/fight/step?session_id={session_id}")
+        
     http_logic(response)
 
     return response.json()

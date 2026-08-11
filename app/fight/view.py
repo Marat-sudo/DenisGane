@@ -269,7 +269,9 @@ async def createLog(
         is_critical: bool,
         crit_damage: float,
         was_dodged: bool,
-        dodge_chance_rolled: float) -> FightLog:
+        dodge_chance_rolled: float,
+        combo_count: int,
+        combo_bonus_damage: int) -> FightLog:
     
 
     if is_critical:
@@ -300,7 +302,9 @@ async def createLog(
         crit_damage=crit_damage,
 
         was_dodged=was_dodged,
-        dodge_chance_rolled=dodge_chance_rolled
+        dodge_chance_rolled=dodge_chance_rolled,
+        combo_count=combo_count,
+        combo_bonus_damage=combo_bonus_damage
         )
     return _log
 
@@ -323,9 +327,12 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         if session.attacker_turn:
             ahp = session.attacker_current_hp
             dhp = session.opponent_current_hp
+            session.attacker_combo=0
+        
         else:
             ahp = session.opponent_current_hp
             dhp = session.attacker_current_hp
+            session.opponent_combo=0
 
         log = await createLog(attack=attacking, 
                         defender=defending, 
@@ -339,7 +346,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         is_critical=is_crit,
                         crit_damage=crit_dam,
                         was_dodged=True,
-                        dodge_chance_rolled=dodge_chance)
+                        dodge_chance_rolled=dodge_chance,
+                        combo_count=0,
+                        combo_bonus_damage=0)
         
         session.current_turn += 1
         session.attacker_turn = not session.attacker_turn   
@@ -389,7 +398,12 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         crit_dam = round(damage, 2)
         is_crit = True       
 
-    
+
+    if session.attacker_turn and session.attacker_combo >= 3:
+        damage += damage * (session.attacker_combo - 2) * 0.1
+
+    elif not session.attacker_turn and session.opponent_combo >= 3:
+        damage += damage * (session.opponent_combo - 2) * 0.1
     
     damage = round(damage, 2)
     defend_hp = session.opponent_current_hp if session.attacker_turn else session.attacker_current_hp 
@@ -423,10 +437,20 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     if session.attacker_turn:
         session.opponent_current_hp = newHP
         att_hp = session.attacker_current_hp
+        
+        session.attacker_combo += 1
+        comdo = session.attacker_combo
+        if session.attacker_combo > session.attacker_max_combo:
+            session.attacker_max_combo = session.attacker_combo
     else:
         session.attacker_current_hp = newHP
         att_hp = session.opponent_current_hp
-    
+        
+        session.opponent_combo += 1
+        comdo = session.opponent_combo
+        if session.opponent_combo > session.opponent_max_combo:
+            session.opponent_max_combo = session.opponent_combo
+
 
     log = await createLog(attack=attacking, 
                         defender=defending, 
@@ -440,7 +464,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         is_critical=is_crit,
                         crit_damage=crit_dam,
                         was_dodged=False,
-                        dodge_chance_rolled=dodge_chance)
+                        dodge_chance_rolled=dodge_chance,
+                        combo_count=comdo,
+                        combo_bonus_damage=(comdo - 2) * 10 if comdo >= 3 else 0)
             
         
 

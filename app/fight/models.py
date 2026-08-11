@@ -38,6 +38,11 @@ class FightSession(Base):
 
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
 
+    attacker_combo: Mapped[int] = mapped_column(default=0)
+    opponent_combo: Mapped[int] = mapped_column(default=0)
+    attacker_max_combo: Mapped[int] = mapped_column(default=0)
+    opponent_max_combo: Mapped[int] = mapped_column(default=0)
+
 
    
 class FightLog(Base):
@@ -62,6 +67,9 @@ class FightLog(Base):
 
     was_dodged: Mapped[bool]
     dodge_chance_rolled: Mapped[float]
+
+    combo_count: Mapped[int]  
+    combo_bonus_damage: Mapped[int]   # хранит число в процентах (10%)
 
 
     

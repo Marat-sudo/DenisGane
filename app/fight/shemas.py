@@ -64,6 +64,14 @@ class choiceFightStep(BaseModel):
     mana_spent: int
     is_critical: bool
 
+    crit_damage: float
+
+    was_dodged: bool
+    dodge_chance_rolled: float
+
+    combo_count: int  
+    combo_bonus_damage: int 
+
     class Config:
         from_attributes = True
     

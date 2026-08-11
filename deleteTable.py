@@ -11,5 +11,5 @@ engine = create_engine("sqlite:///app.db")
  
 # Drop ONLY the "users" table (targeted deletion)  
 # Base.metadata.drop_all(engine, tables=[FightSession.__table__]) 
-FightLog.__table__.drop(engine)
+FightSession.__table__.drop(engine)
 

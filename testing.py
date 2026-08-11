@@ -1,6 +1,7 @@
 import tools.rich.game_menus as gm
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
 import time
 cs = Console()
 
@@ -53,4 +54,18 @@ a = {"skills": [
   ]
 }
 
-skill_menu(a["skills"])
+
+
+
+
+panel = Panel(
+        "aaaaasd12",
+        width=80,
+        style="spring_green3",
+        border_style="green"
+    )
+
+
+
+
+cs.print(panel)

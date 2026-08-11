@@ -11,12 +11,12 @@ USER_ID = None
 PLAYER_ID = None
 STEP_COLORS = {
     "крит урон": {
-        "text": "Нанесён критический урон",
+        "text": "Нанесли критический урон",
         "title": "red1",
         "border": "dark_red"
     },
     "обычный урон": {
-        "text": "Нанесён урон",
+        "text": "Вы нанесли базовый урон",
         "title": "red3",
         "border": "red3"
     },
@@ -273,21 +273,25 @@ def game():
             )
 
 
-            print("\n")
-            act_type = fight(
+            print("")
+            act_type, skill = fight(
                 max_mana=player_total_mana,
                 cur_mana=player_current_mana,
                 max_hp=player_total_hp,
                 cur_hp=player_current_hp,
                 skills = []  
                 )
-    
+            
+            
 
-            
-            
-            # TODO я устал
+            qu.post_fight_step(act_type, skill)
             print("")
-        
+
+            ses = qu.get_session_info(fight_id)
+
+            if ses["status"] == "finish":
+                pass
+
 
         else:
             print("вы ожидайете действия врага")
