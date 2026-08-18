@@ -72,7 +72,10 @@ class SkillModel(Base):
     skill_type: Mapped[str]
     description: Mapped[str]
 
-    
+    applies_effect_id: Mapped[int | None] = mapped_column(ForeignKey("effecttype.id"), nullable=True)
+    effect_duration: Mapped[int | None] = mapped_column(nullable=True)
+    effect_chance: Mapped[float | None] = mapped_column(nullable=True)
+
 
     hero: Mapped[List["HeroModel"]] = relationship("HeroModel", back_populates="skills")
 
@@ -83,9 +86,6 @@ class PlayerAndSkill(Base):
     player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
     skill_id: Mapped[int] = mapped_column(ForeignKey("skills.id"), nullable=False)
     level: Mapped[int] = mapped_column(default=1)
-
-
-
 
 
 

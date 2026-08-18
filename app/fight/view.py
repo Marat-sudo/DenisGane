@@ -97,6 +97,36 @@ async def player_avtive_fight(id: int, db: AsyncSession = Depends(get_db)):
     return fight
 
 
+# TODO доделать вот это и протестировать
+@router.get("/effects/types", response_model=choiceActiveFight)
+async def effects_types(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(EffectType))
+    effects = result.scalars().all()
+
+    return effects
+
+
+@router.post("/effects/create", response_model=ReadEffecType)
+async def register_hero(data: Effect, db: AsyncSession = Depends(get_db)):
+    effect = EffectType(
+                        name = data.name,
+                        type = data.type,
+                        affected_stat = data.affected_stat,
+                        modifier_type = data.modifier_type, 
+                        modifier_value = data.modifier_value,
+                        can_stack = data.can_stack,
+                        max_stacks = data.max_stacks
+                        )
+    
+
+    db.add(effect)
+    await db.commit()
+    await db.refresh(effect)
+
+
+    return effect
+    
+
 @router.put("/updateFightMana")
 async def update_mana_in_fight(session_id: int, player_id: int,mana: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)
@@ -122,6 +152,7 @@ async def update_mana_in_fight(session_id: int, player_id: int,mana: int, db: As
     raise HTTPException(status_code=200, detail=f"мана пополнена до {mana}")
 
 
+# TODO доделать для скилов
 @router.post("/step")
 async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(FightSession)

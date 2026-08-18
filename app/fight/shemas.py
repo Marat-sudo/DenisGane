@@ -72,6 +72,10 @@ class choiceFightStep(BaseModel):
     combo_count: int  
     combo_bonus_damage: int 
 
+    effect_applied_id: Optional[int] = None
+    effect_damage: Optional[int] = None
+    
+
     class Config:
         from_attributes = True
     
@@ -118,9 +122,22 @@ class ReadCooldown(Cooldown):
         from_attributes = True
     
 
+class Effect(BaseModel):
+    name: str
+    type: str
+    affected_stat: str
+    modifier_type: str
+    modifier_value: float
+    can_stack: bool
+    max_stacks: int
+
+    class Config:
+        from_attributes = True
 
 
-
-
+class ReadEffecType(Effect):
+    id: int
+    class Config:
+        from_attributes = True
 
 

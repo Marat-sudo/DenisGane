@@ -71,6 +71,9 @@ class FightLog(Base):
     combo_count: Mapped[int]  
     combo_bonus_damage: Mapped[int]   # хранит число в процентах (10%)
 
+    effect_applied_id: Mapped[int] = mapped_column(ForeignKey("effecttype.id"), nullable=True)
+    effect_damage: Mapped[int] = mapped_column(nullable=True) 
+
 
     
 class PlayerSkillCooldown(Base):
@@ -82,3 +85,27 @@ class PlayerSkillCooldown(Base):
     turns_remaining: Mapped[int]
 
 
+class EffectType(Base):
+    __tablename__ = "effecttype"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str]  
+    type: Mapped[str] 
+    affected_stat: Mapped[str] 
+    modifier_type: Mapped[str]  
+    modifier_value: Mapped[float] 
+    can_stack: Mapped[bool] 
+    max_stacks: Mapped[int] 
+
+
+
+
+class ActiveEffect(Base):
+    __tablename__ = "activeeffect"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    fight_session_id: Mapped[int] = mapped_column(ForeignKey("fightsession.id"),nullable=False)
+    target_player_id: Mapped[int]
+    caster_player_id: Mapped[int]
+    effect_type_id: Mapped[int] = mapped_column(ForeignKey("effecttype.id"),nullable=False)
+    turns_remaining: Mapped[int]
+    stack_count: Mapped[int] = mapped_column(default=1)
+    applied_at_turn: Mapped[int]

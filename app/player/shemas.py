@@ -52,6 +52,11 @@ class Skills(BaseModel):
     skill_type: str
     description: str 
 
+    applies_effect_id: Optional[int] = None
+    effect_duration: Optional[int] = None
+    effect_chance: Optional[float] = None
+
+
     class Config:
         from_attributes = True
 

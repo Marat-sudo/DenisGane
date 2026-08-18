@@ -78,7 +78,10 @@ async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
                            mana_cost = data.mana_cost,
                            cooldown = data.cooldown,
                            skill_type = data.skill_type,
-                           description = data.description
+                           description = data.description,
+                           applies_effect_id = data.applies_effect_id,
+                           effect_duration = data.effect_duration,
+                           effect_chance = data.effect_chance
                            )
 
     db.add(new_skill)
@@ -249,7 +252,7 @@ async def info_player(id: int, db: AsyncSession = Depends(get_db)):
     return player
 
 
-@router.get("/combat-stats", response_model=StatsPlayer)
+@router.get("/combat_stats", response_model=StatsPlayer)
 async def stats_player(id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(PlayerModel).where(PlayerModel.id == id))
     player = result.scalar_one_or_none()
