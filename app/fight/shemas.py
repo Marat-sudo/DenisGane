@@ -135,6 +135,38 @@ class Effect(BaseModel):
         from_attributes = True
 
 
+class ReadEffect(Effect):
+    id: int
+
+
+class ListEffects(BaseModel):
+    effects: List[ReadEffect]
+
+
+class ActiveEff(BaseModel):
+    id: int
+    fight_session_id: int
+    target_player_id: int
+    caster_player_id: int
+    effect_type_id: int
+    turns_remaining: int
+    applied_at_turn: int
+
+    class Config:
+        from_attributes = True
+
+
+class ReadActiveEffect(ActiveEff):
+    id: int
+
+
+class ListActiveEffect(BaseModel):
+    effects: List[ReadActiveEffect]
+
+
+
+
+
 class ReadEffecType(Effect):
     id: int
     class Config:

@@ -90,8 +90,8 @@ class EffectType(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str]  
     type: Mapped[str] 
-    affected_stat: Mapped[str] 
-    modifier_type: Mapped[str]  
+    affected_stat: Mapped[str]   # ("attack", "defense", "agility", "hp_per_turn")
+    modifier_type: Mapped[str]   # ("percent", "flat") 
     modifier_value: Mapped[float] 
     can_stack: Mapped[bool] 
     max_stacks: Mapped[int] 
@@ -107,5 +107,4 @@ class ActiveEffect(Base):
     caster_player_id: Mapped[int]
     effect_type_id: Mapped[int] = mapped_column(ForeignKey("effecttype.id"),nullable=False)
     turns_remaining: Mapped[int]
-    stack_count: Mapped[int] = mapped_column(default=1)
     applied_at_turn: Mapped[int]

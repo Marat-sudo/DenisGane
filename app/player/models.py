@@ -32,9 +32,6 @@ class PlayerModel(Base):
     hero : Mapped[List["HeroModel"]] = relationship("HeroModel", back_populates="players")
 
 
-
-
-
 class HeroModel(Base):
 
     __tablename__ ="heros"
@@ -69,7 +66,7 @@ class SkillModel(Base):
     base_damage: Mapped[int]
     mana_cost: Mapped[int]
     cooldown: Mapped[int]
-    skill_type: Mapped[str]
+    skill_type: Mapped[str]     # ("damage", "heal", "buff", "debuff")
     description: Mapped[str]
 
     applies_effect_id: Mapped[int | None] = mapped_column(ForeignKey("effecttype.id"), nullable=True)

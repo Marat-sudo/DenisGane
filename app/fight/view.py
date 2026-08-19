@@ -97,13 +97,6 @@ async def player_avtive_fight(id: int, db: AsyncSession = Depends(get_db)):
     return fight
 
 
-# TODO доделать вот это и протестировать
-@router.get("/effects/types", response_model=choiceActiveFight)
-async def effects_types(id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(EffectType))
-    effects = result.scalars().all()
-
-    return effects
 
 
 @router.post("/effects/create", response_model=ReadEffecType)
@@ -125,7 +118,34 @@ async def register_hero(data: Effect, db: AsyncSession = Depends(get_db)):
 
 
     return effect
-    
+
+
+@router.get("/effects/types", response_model=ListEffects)
+async def effects_types(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(EffectType))
+    effs = result.scalars().all()
+
+    return ListEffects(effects=effs)
+
+
+@router.get("/effect", response_model=Effect)
+async def get_effect(eff_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(EffectType).where(EffectType.id == eff_id))
+    eff = result.scalar_one_or_none()
+
+    return eff
+
+
+@router.get("/active-effects", response_model=ListActiveEffect)
+async def active_effects(session_id: int, player_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(ActiveEffect)
+                              .where(
+                                  ActiveEffect.fight_session_id == session_id,
+                                  ActiveEffect.target_player_id == player_id))
+    eff = result.scalars().all()
+
+    return ListEffects(effects=eff)
+
 
 @router.put("/updateFightMana")
 async def update_mana_in_fight(session_id: int, player_id: int,mana: int, db: AsyncSession = Depends(get_db)):
@@ -191,9 +211,11 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
 
     
     if skillsCooldowns:
-        for skillcd in skillsCooldowns:
-            if skill_id and skill_id == skillcd.skill_id and skillcd != 0:
-                raise HTTPException(status_code=203, detail="не прошло кд навыка")
+        if skill_id:
+            for skillcd in skillsCooldowns:
+                if skill_id == skillcd.skill_id and skillcd != 0:
+                    # я не помню почему skillcd != 0
+                    raise HTTPException(status_code=203, detail="не прошло кд навыка")
 
 
         for cd_skill in skillsCooldowns:
@@ -212,6 +234,7 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                     db=db,
                     skill_id=skill_id)
 
+
 async def player_has_skill(player_id, skill_id, db):
     res = await db.execute(select(PlayerAndSkill)
                             .where(
@@ -221,8 +244,9 @@ async def player_has_skill(player_id, skill_id, db):
     has = res.scalar_one_or_none()
     return has
 
+
+
 async def step(session, opponent, attacker, db, skill_id=None):
-    
     if session.attacker_turn:
         return await fight_players(
             attacking=attacker,
@@ -242,6 +266,7 @@ async def step(session, opponent, attacker, db, skill_id=None):
 
    
 
+
     
 @router.get("/session/steps", response_model=ListFightSteps)
 async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
@@ -251,6 +276,7 @@ async def fight_steps_info(fight_id: int, db: AsyncSession = Depends(get_db)):
     s = result.scalars().all()
 
     return ListFightSteps(steps=s)
+
 
 @router.get("/session/info", response_model=ReadSession)
 async def fight_session_info(fight_id: int, db: AsyncSession = Depends(get_db)):
@@ -274,6 +300,20 @@ async def create_cooldown(session_id: int, player_id: int, skill_id: int, _coold
     await db.refresh(cooldown)
 
     return cooldown
+
+
+async def create_active_effect(effect, session, effect_type_id, attacking_id, defending_id):
+    act_eff = ActiveEffect(
+        fight_session_id = session.id,
+        target_player_id = defending_id,
+        caster_player_id = attacking_id,
+        effect_type_id = effect_type_id,
+        turns_remaining = effect.current_turn,
+        stack_count = 0,
+        applied_at_turn = session.id
+    )
+
+    return act_eff
 
 
 @router.get("/cooldown/get", response_model=ReadCooldown)
@@ -302,14 +342,17 @@ async def createLog(
         was_dodged: bool,
         dodge_chance_rolled: float,
         combo_count: int,
-        combo_bonus_damage: int) -> FightLog:
+        combo_bonus_damage: int,
+        effect_applied_id: int,
+        effect_damage: float) -> FightLog:
     
 
     if is_critical:
         descript = f"{attack.nickname} ({attHp} HP) нанёс {defender.nickname} {damage} крит урона, понизив хп провивника до {defHp} HP"
+    
     elif was_dodged:
-        
         descript = f"{defender.nickname} {defHp} уклонился от атаки {attack.nickname} {attHp} и не получил урон HP"
+    
     elif skill_id:
         skill = get_player_skills(skill_id)
 
@@ -335,8 +378,9 @@ async def createLog(
         was_dodged=was_dodged,
         dodge_chance_rolled=dodge_chance_rolled,
         combo_count=combo_count,
-        combo_bonus_damage=combo_bonus_damage
-        )
+        combo_bonus_damage=combo_bonus_damage,
+        effect_applied_id=effect_applied_id,
+        effect_damage=effect_damage)
     return _log
 
     
@@ -347,14 +391,28 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     spent_mana = 0
     is_crit = False
     crit_dam = 0.0
-
-
+    effect_applied_id = None
+    effect_damage = None
+    
     dodge_chance = min(50, defending.agility / 2)
 
+    effs = await active_effects(session.id, attacking.id)["effects"]
     
-    
+    if effs:
+        for ActEff in effs: 
+            ActEff.turns_remaining -= 1
+            eff = await get_effect(ActEff.effect_type_id)
+
+            if eff.type == "hp_per_turn":
+                if session.attacker_turn:
+                    session.attacker_current_hp += eff.modifier_value
+                
+                else:
+                    session.opponent_current_hp += eff.modifier_value
+            
+
     if dodge_chance > random.randint(0, 100):
-    
+        """проверка на уклонение и создание лога"""
         if session.attacker_turn:
             ahp = session.attacker_current_hp
             dhp = session.opponent_current_hp
@@ -379,7 +437,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         was_dodged=True,
                         dodge_chance_rolled=dodge_chance,
                         combo_count=0,
-                        combo_bonus_damage=0)
+                        combo_bonus_damage=0,
+                        effect_applied_id=effect_applied_id,
+                        effect_damage=effect_damage)
         
         session.current_turn += 1
         session.attacker_turn = not session.attacker_turn   
@@ -403,9 +463,11 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                              .where(SkillModel.id == skill_id))
         skill = res.scalar_one_or_none()
 
-        if defen_mana< skill.mana_cost:
+        if defen_mana < skill.mana_cost:
                 raise HTTPException(status_code=200, detail="недостаточно маны")
 
+
+        
         if skill.skill_type == "damage":
             damage = (attacking.attack * skill.damage_multiplier + skill.base_damage) - defending.defense       
             if session.attacker_turn:
@@ -423,6 +485,88 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                     skill_id=skill.id,
                     _cooldown=skill.cooldown,
                     db=db)
+            
+        else:
+            eff = await get_effect(skill.applies_effect_id)
+            effect_applied_id = eff.id
+            
+            if skill.skill_type == "buff":    
+                efs = active_effects(session.id, attacking.id)
+                
+                match eff.affected_stat:
+                    case "attack":
+                        attacking.attack += eff.modifier_value
+                
+                    case "defense":
+                        attacking.defense += eff.modifier_value
+                
+                    case "agility":
+                        attacking.agility += eff.modifier_value
+                        
+                    case "hp_per_turn":
+                        if session.attacker_turn:
+                            session.attacker_current_hp += eff.modifier_value
+                        
+                        else:
+                            session.opponent_current_hp += eff.modifier_value
+                        effect_damage = eff.modifier_value
+
+                
+
+            elif skill.skill_type == "debuff":
+                pass
+
+            """
+            я понял, чтобы вы денис хотели реализовать, но я решил хранить каждый повторяйщийся
+            де/бафф, как новую запись в бд, можно реализовать через stack_count, оно будет работать как надо
+            (каждый де\бафф должен иметь не зависимый таймер и применяться одновременно)
+            но так сложно преобразовывать данные для пользователя, чтобы было видно каждый эффект
+            и сколько ему осталось 
+
+        ╔═══════════════════════════════════╗ 
+        ║ Воин                              
+        ║ 
+        ║ HP: [████████░░] 80/100           
+        ║ Атака: 25 → 37 (+50%)             
+        ║                                   
+        ║ Активные эффекты:                 
+        ║ Ярость+50% атаки   (2)  
+        ║ Защита +20 защиты   (3)  
+        ║ Отравление  -5 HP/ход  (8)
+        ╚═══════════════════════════════════╝ -- у вас это было бы 
+
+        ║ Активные эффекты:                 
+        ║ Ярость +50% атаки   (2)  
+        ║ Защита +20 защиты   (3)  
+        ║ Отравление  -5 HP/ход  (1)
+        ║ Отравление  -5 HP/ход  (3)
+        ║ Отравление  -5 HP/ход  (4)
+        ╚═══════════════════════════════════╝ -- как я хотел
+
+        Фактически turns_remaining в вашем случае хранит сколько всего срабатываний 
+        произвдет эффект, если не прибавлять к turns_remaining effect_duration, то получается
+        что все последующие эффекты перестанут дейвствовать вместе с первым наложенным эффектом такого типа
+        https://drive.google.com/file/d/1jWDioC8F9JycjAbxFoSJECEHb9b9cigm/view?usp=sharing
+        здесь я расписал как можно реализовать таким методом, он не будет создавать дубликаты в бд
+        но будет заменяться applied_at_turn при каждом наложении + Я не смог в адекватной форме это перенести
+        в стакающие ДОТы. В теории если в мою формулу включить applied_at_turn и текущий ход,
+        то можно привести к виду, который я хотел, но будто проще отдельные логи наложения хранить  
+            """
+
+            
+            for i in efs:
+                if i.id == eff.id:
+                    act_eff = ActiveEffect(
+                        fight_session_id = session.id,
+                        target_player_id = defending.id,
+                        caster_player_id = attacking.id,
+                        effect_type_id = effect_applied_id,
+                        turns_remaining = i.turns_remaining + eff.turns_remaining,
+                        applied_at_turn = session.id
+                    )
+                
+            
+                
     
     if attacking.crit_chance >= random.randint(0, 100):
         damage = damage * attacking.crit_multiplier 
@@ -440,6 +584,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     defend_hp = session.opponent_current_hp if session.attacker_turn else session.attacker_current_hp 
     newHP = defend_hp - damage 
     newHP = round(newHP, 2)
+
     if newHP <= 0:
 
         if session.attacker_turn:
@@ -497,7 +642,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                         was_dodged=False,
                         dodge_chance_rolled=dodge_chance,
                         combo_count=comdo,
-                        combo_bonus_damage=(comdo - 2) * 10 if comdo >= 3 else 0)
+                        combo_bonus_damage=(comdo - 2) * 10 if comdo >= 3 else 0,
+                        effect_applied_id=effect_applied_id,
+                        effect_damage=effect_damage)
             
         
 
