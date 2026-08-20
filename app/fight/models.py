@@ -89,7 +89,7 @@ class EffectType(Base):
     __tablename__ = "effecttype"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str]  
-    type: Mapped[str] 
+    type: Mapped[str] # ("buff" или "debuff") 
     affected_stat: Mapped[str]   # ("attack", "defense", "agility", "hp_per_turn")
     modifier_type: Mapped[str]   # ("percent", "flat") 
     modifier_value: Mapped[float] 
@@ -107,4 +107,5 @@ class ActiveEffect(Base):
     caster_player_id: Mapped[int]
     effect_type_id: Mapped[int] = mapped_column(ForeignKey("effecttype.id"),nullable=False)
     turns_remaining: Mapped[int]
+    final_addition: Mapped[int | None] = mapped_column(nullable=True)
     applied_at_turn: Mapped[int]
