@@ -145,10 +145,10 @@ async def active_effects(session_id: int, player_id: int, db: AsyncSession = Dep
                                   ActiveEffect.turns_remaining > 0))
     eff = result.scalars().all()
 
-    return ListEffects(effects=eff)
+    return ListActiveEffect(effects=eff)
 
 
-@router.get("/active-effects-buff_debuff", response_model=ListActiveEffect)
+@router.get("/active-effects-buff_debuff", response_model=ListEffects)
 async def active_effects_buff_debuff(session_id: int, player_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ActiveEffect)
                               .where(
@@ -309,7 +309,6 @@ async def create_cooldown(session_id: int, player_id: int, skill_id: int, _coold
     )
     db.add(cooldown)
     await db.commit()
-    await db.refresh(cooldown)
 
     return cooldown
 
@@ -425,24 +424,31 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         for ActEff in effs: 
             # TODO тут вроде сделал всё, но вроде можно улучшить
             ActEff.turns_remaining -= 1
-            eff = await get_effect(ActEff.effect_type_id)
+            
 
+            eff = await get_effect(ActEff.effect_type_id, db)
 
-            if eff.modifier_type == "percent" and eff.affected_stat != "hp_per_turn":
+            mod_value = 0
+            if eff.affected_stat == "hp_per_turn":
+                mod_value = eff.modifier_value
+            elif eff.modifier_type == "percent":
                 mod_value = int(getattr(attacking, eff.affected_stat) * (1 + eff.modifier_value / 100))
-            else:
+            elif eff.modifier_type == "flat":
                 mod_value = max(getattr(attacking, eff.affected_stat) + eff.modifier_value, 1)
 
 
             if eff.affected_stat == "hp_per_turn" or skill.skill_type == "heal":
+                print("a" * 50)
+                print(mod_value)
+                print(session.opponent_current_hp)
+                
                 if session.attacker_turn:
                     session.attacker_current_hp = min(session.attacker_current_hp + mod_value, attacking.max_hp)
-                        
-                else:
-                    session.opponent_current_hp = min(session.opponent_current_hp + mod_value, defending.max_hp)
+                else:        
+                    session.opponent_current_hp = min(session.opponent_current_hp + mod_value, attacking.max_hp)
+                effect_damage = eff.modifier_value 
 
-                effect_damage = eff.modifier_value        
-           
+            
             
 
     if dodge_chance > random.randint(0, 100):
@@ -519,14 +525,14 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         if skill.skill_type == "damage":
             damage = (attacking.attack * skill.damage_multiplier + skill.base_damage) - defending.defense       
 
-        elif skill.effect_chance > random.randint(0, 100):
+        elif skill.effect_chance > random.randint(0, 1):
             """если навык не для урона"""
             
-            eff = await get_effect(skill.applies_effect_id)
+            eff = await get_effect(skill.applies_effect_id, db)
 
             if eff.modifier_type == "percent" and eff.affected_stat != "hp_per_turn":
                 mod_value = int(getattr(attacking, eff.affected_stat) * (1 + eff.modifier_value / 100))
-            else:
+            elif eff.affected_stat != "hp_per_turn":
                 mod_value = max(getattr(attacking, eff.affected_stat) + eff.modifier_value, 1)
 
             if skill.skill_type == "buff":
@@ -540,7 +546,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                 target_player_id = defending.id,
                 caster_player_id = attacking.id,
                 effect_type_id = eff.id,
-                turns_remaining = eff.turns_remaining,
+                turns_remaining = skill.effect_duration,
                 applied_at_turn = session.current_turn
                 )
             
@@ -625,10 +631,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             )
 
         db.add(win)
-        await db.commit()
-        await db.refresh(session)
-        await db.refresh(attacking)
-        await db.refresh(defending) 
+  
         
             
         
@@ -643,7 +646,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         if session.attacker_combo > session.attacker_max_combo:
             session.attacker_max_combo = session.attacker_combo
 
-    elif not session.attacker_turn:
+    else:
         session.attacker_current_hp = newHP
         att_hp = session.opponent_current_hp
         
@@ -676,13 +679,15 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             
     
 
-    de_ba_ff =await active_effects_buff_debuff(session.id, attacking.id, db)
+    de_ba_ff = await active_effects(session.id, attacking.id, db)
     de_ba_ff = de_ba_ff.effects
     if de_ba_ff:
         """снятие баффов / дебаффов"""
         for ActEff in de_ba_ff: 
-            eff = await get_effect(ActEff.effect_type_id)
-           
+            eff = await get_effect(ActEff.effect_type_id, db)
+            if eff.affected_stat == "hp_per_turn":
+                continue
+
             mod_value = getattr(attacking, eff.affected_stat) - ActEff.final_addition
             if eff.type == "buff":
                 setattr(attacking, eff.affected_stat, mod_value)    
@@ -690,8 +695,8 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             elif eff.type == "debuff":
                 setattr(attacking, eff.affected_stat, mod_value) 
                 
-            await db.commit()
             await db.refresh(attacking)
+        await db.commit()
             
     
 
