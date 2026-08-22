@@ -153,8 +153,7 @@ async def active_effects_buff_debuff(session_id: int, player_id: int, db: AsyncS
     result = await db.execute(select(ActiveEffect)
                               .where(
                                   ActiveEffect.fight_session_id == session_id,
-                                  ActiveEffect.target_player_id == player_id,
-                                  ActiveEffect.affected_stat != "hp_per_turn"))
+                                  ActiveEffect.target_player_id == player_id))
     eff = result.scalars().all()
 
     return ListEffects(effects=eff)
@@ -234,9 +233,9 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
         for cd_skill in skillsCooldowns:
             cd_status = (session.attacker_turn and attacker.id == cd_skill.player_id) or (not session.attacker_turn and opponent.id == cd_skill.player_id)
             if cd_status:  
-                skillcd.turns_remaining -= 1
+                cd_skill.turns_remaining -= 1
                 await db.commit()
-                await db.refresh(skillcd)
+                await db.refresh(cd_skill)
             
            
 
@@ -418,7 +417,8 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     
     dodge_chance = min(50, defending.agility / 2)
 
-    effs = await active_effects(session.id, attacking.id)["effects"]
+    effs = await active_effects(session.id, attacking.id, db)
+    effs = effs.effects
     
     if effs:
         """проверка наложенных эффектов"""
@@ -521,7 +521,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
 
         elif skill.effect_chance > random.randint(0, 100):
             """если навык не для урона"""
-            skill_has_dmg = False
+            
             eff = await get_effect(skill.applies_effect_id)
 
             if eff.modifier_type == "percent" and eff.affected_stat != "hp_per_turn":
@@ -591,16 +591,16 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
 
        
     
-    if attacking.crit_chance >= random.randint(0, 100) and skill_has_dmg:
+    if attacking.crit_chance >= random.randint(0, 100):
         damage = damage * attacking.crit_multiplier 
         crit_dam = round(damage, 2)
         is_crit = True       
 
 
-    if session.attacker_turn and session.attacker_combo >= 3 and skill_has_dmg:
+    if session.attacker_turn and session.attacker_combo >= 3:
         damage += damage * (session.attacker_combo - 2) * 0.1
 
-    elif not session.attacker_turn and session.opponent_combo >= 3 and skill_has_dmg:
+    elif not session.attacker_turn and session.opponent_combo >= 3:
         damage += damage * (session.opponent_combo - 2) * 0.1
     
     damage = round(damage, 2)
@@ -634,7 +634,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         
             
 
-    if session.attacker_turn and skill_has_dmg:
+    if session.attacker_turn:
         session.opponent_current_hp = newHP
         att_hp = session.attacker_current_hp
         
@@ -643,7 +643,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         if session.attacker_combo > session.attacker_max_combo:
             session.attacker_max_combo = session.attacker_combo
 
-    elif not session.attacker_turn and skill_has_dmg:
+    elif not session.attacker_turn:
         session.attacker_current_hp = newHP
         att_hp = session.opponent_current_hp
         
@@ -676,8 +676,8 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             
     
 
-    de_ba_ff = active_effects_buff_debuff(session.id, attacking.id)["effects"]
-
+    de_ba_ff =await active_effects_buff_debuff(session.id, attacking.id, db)
+    de_ba_ff = de_ba_ff.effects
     if de_ba_ff:
         """снятие баффов / дебаффов"""
         for ActEff in de_ba_ff: 
