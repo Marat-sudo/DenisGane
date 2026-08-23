@@ -92,7 +92,7 @@ async def register_skill(data: Skills, db: AsyncSession = Depends(get_db)):
     return new_skill
     
 
-@router.get("/skills", response_model=SkillsList)
+@router.get("/skills", response_model=SkillsList, tags=['skills'])
 async def player_skills(id: int, db: AsyncSession = Depends(get_db)):
     """Возвращает скилы пользователя"""
     result = await db.execute(select(SkillModel).where(SkillModel.hero_id == id))
@@ -100,6 +100,24 @@ async def player_skills(id: int, db: AsyncSession = Depends(get_db)):
 
     return SkillsList(skills=_skills)
 
+@router.put("/skills/update", tags=['skills'])
+async def update_skill(id: int, data: UpdateSkill, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(SkillModel).where(SkillModel.id == id)) 
+    skill = result.scalar_one_or_none()
+
+     
+
+    skill.damage_multiplier = data.damage_multiplier  
+    skill.base_damage = data.base_damage
+    skill.mana_cost =data.mana_cost
+    skill.cooldown = data.cooldown
+    skill.skill_type = data.skill_type
+    skill.description = data.description
+
+    await db.commit()
+    await db.refresh(skill)
+
+    raise HTTPException(status_code=200, detail="Запрос обработан")
 
 @router.delete("/skills/delete", tags=['skills'])
 async def delete_skill(id: int, db: AsyncSession = Depends(get_db)):
@@ -189,7 +207,7 @@ async def update_player(id: int, data: UpdatePlayer, db: AsyncSession = Depends(
     return player
 
 
-@router.put("/setSkill", response_model=ReadPlayerSkill, status_code=201)
+@router.put("/setSkill", response_model=ReadPlayerSkill, status_code=201, tags=['skills'])
 async def set_player_skill(player_id: int, skill_id: int, db: AsyncSession = Depends(get_db)):
     res = await db.execute(select(PlayerModel)
                             .where(PlayerModel.id == player_id))

@@ -123,6 +123,15 @@ class UpdatePlayer(BaseModel):
     base_crit_multiplier: float
 
 
+class UpdateSkill(BaseModel):
+    damage_multiplier: float 
+    base_damage: int
+    mana_cost: int
+    cooldown: int
+    skill_type: str
+    description: str
+
+
 class ReadPlayerSkill(BaseModel):
     id: int
     player_id: int
