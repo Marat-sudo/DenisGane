@@ -156,6 +156,15 @@ class ActiveEff(BaseModel):
         from_attributes = True
 
 
+class UpdateEffect(BaseModel):
+    type: str 
+    affected_stat: str
+    modifier_type: str
+    modifier_value: float
+    can_stack: bool
+    max_stacks: int
+
+
 class ReadActiveEffect(ActiveEff):
     id: int
 
