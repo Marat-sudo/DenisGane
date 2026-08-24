@@ -135,6 +135,7 @@ async def get_effect(eff_id: int, db: AsyncSession = Depends(get_db)):
 
     return eff
 
+
 @router.put("/effect/update", tags=['effect'])
 async def update_skill(id: int, data: UpdateEffect, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(EffectType).where(EffectType.id == id)) 
@@ -204,7 +205,7 @@ async def update_mana_in_fight(session_id: int, player_id: int,mana: int, db: As
     raise HTTPException(status_code=200, detail=f"мана пополнена до {mana}")
 
 
-# TODO доделать для скилов
+
 @router.post("/step", tags=['fight'])
 async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = Depends(get_db)):
     async with db.begin():
@@ -256,6 +257,19 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                 cd_status = (session.attacker_turn and attacker.id == cd_skill.player_id) or (not session.attacker_turn and opponent.id == cd_skill.player_id)
                 if cd_status:  
                     cd_skill.turns_remaining -= 1
+
+        if skill_id:
+            skill = await stf.get_skill_by_id(skill_id, db)
+            
+            if skill.applies_effect_id:
+                effect_max_stack = await stf.get_effect_stacks(skill.applies_effect_id, db)
+                eff_count = await stf.act_eff_id(skill.applies_effect_id, db)
+
+                if eff_count.count == effect_max_stack:
+                    raise HTTPException(status_code=203, detail="Максимальное количество стаков")
+            
+
+                
 
         # ... получение opponent, attacker и cooldowns ...
 
@@ -368,11 +382,15 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             ActEff.turns_remaining -= 1
             
 
-            eff = await get_effect(ActEff.effect_type_id, db)
+            eff = await stf.get_effect(ActEff.effect_type_id, db)
 
             mod_value = 0
             if eff.affected_stat == "hp_per_turn":
-                mod_value = eff.modifier_value
+                if eff.modifier_type == "percent":
+                    mod_value = int(attacking.max_hp * (1 + eff.modifier_value / 100)) - attacking.max_hp
+                else:
+                    mod_value = eff.modifier_value
+
             elif eff.modifier_type == "percent":
                 mod_value = int(getattr(attacking, eff.affected_stat) * (1 + eff.modifier_value / 100))
             elif eff.modifier_type == "flat":
@@ -385,9 +403,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                 else:        
                     session.opponent_current_hp = min(session.opponent_current_hp + mod_value, attacking.max_hp)
                 effect_damage += eff.modifier_value 
-    effs = await stf.get_active_effects_list(session.id, attacking.id, db)
-    
-            
+
+
+    effs = await stf.get_active_effects_list(session.id, attacking.id, db)     
     res = await db.execute(select(SkillModel)
                              .where(SkillModel.id == skill_id))
     skill = res.scalar_one_or_none()
@@ -436,80 +454,15 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     if damage <= 0:
         damage = 1
 
-    defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
+    
 
     if skill_id:
-        res = await db.execute(select(SkillModel)
-                             .where(SkillModel.id == skill_id))
-        skill = res.scalar_one_or_none()
-        """Обработка использования скила / наложение эффекта"""
-        
-        if defen_mana < skill.mana_cost:
-                raise HTTPException(status_code=202, detail="недостаточно маны")
-
-        if session.attacker_turn:
-            session.attacker_mana -= skill.mana_cost
-        else:
-            session.opponent_mana -= skill.mana_cost
-
         type_act = "skill"
-        spent_mana = skill.mana_cost
 
-        cooldown = PlayerSkillCooldown(
-            fight_session_id=session.id,
-            player_id=attacking.id,
-            skill_id=skill_id,
-            turns_remaining = skill.cooldown)
-        
-        db.add(cooldown)
+
+        damage, spent_mana, effect_applied_id, log_has_dmg = await stf.skill(session, skill_id, attacking, defending, db)
         
         
-        if skill.damage_multiplier == 0.0:
-            log_has_dmg = False
-
-        else:
-            damage = (attacking.attack * skill.damage_multiplier + skill.base_damage) - defending.defense       
-
-        if skill.effect_chance and skill.effect_chance > random.randint(0, 1):
-            
-            eff = await get_effect(skill.applies_effect_id, db)
-
-            if eff.modifier_type == "percent" and eff.affected_stat != "hp_per_turn":
-                mod_value = int(getattr(attacking, eff.affected_stat) * (1 + eff.modifier_value / 100))
-            elif eff.affected_stat != "hp_per_turn":
-                mod_value = max(getattr(attacking, eff.affected_stat) + eff.modifier_value, 1)
-
-            print("1" * 50)
-            if skill.skill_type == "buff":
-                print("0" * 50)
-                print(getattr(attacking, eff.affected_stat))
-
-                final_addition = mod_value - getattr(attacking, eff.affected_stat) 
-                setattr(attacking, eff.affected_stat, mod_value)
-                db.add(attacking)
-                
-                print(getattr(attacking, eff.affected_stat))    
-                    
-            elif skill.skill_type == "debuff" and eff.affected_stat != "hp_per_turn":
-                final_addition = mod_value - getattr(defending, eff.affected_stat)
-                setattr(defending, eff.affected_stat, mod_value)  
-                db.add(defending)
-
-            act_eff = ActiveEffect(
-                fight_session_id = session.id,
-                target_player_id = attacking.id if eff.type == "buff" else defending.id,
-                caster_player_id = attacking.id,
-                effect_type_id = eff.id,
-                turns_remaining = skill.effect_duration,
-                final_addition = final_addition,
-                applied_at_turn = session.current_turn
-                )
-            
-            db.add(act_eff)
-        
-        else:
-            """Если не получилось наложить эффект его айди становиться отрицательным"""
-            effect_applied_id = skill.applies_effect_id * -1
         
     
         """
@@ -590,7 +543,17 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             )
 
         db.add(win)
-  
+        
+        de_ba_ff = await stf.get_active_de_buff(session.id, attacking.id, db)
+        if de_ba_ff:
+            """снятие баффов / дебаффов"""
+            for ActEff in de_ba_ff: 
+                eff = await stf.get_effect(ActEff.effect_type_id, db)
+                if eff.affected_stat == "hp_per_turn":
+                    continue
+                mod_value = getattr(attacking, eff.affected_stat) - ActEff.final_addition
+                
+                setattr(attacking, eff.affected_stat, mod_value)    
         
     if session.attacker_turn:
         session.opponent_current_hp = newHP
@@ -609,6 +572,11 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         comdo = session.opponent_combo
         if session.opponent_combo > session.opponent_max_combo:
             session.opponent_max_combo = session.opponent_combo
+
+
+   
+   
+
 
 
     if not log_has_dmg:
@@ -638,21 +606,17 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
 
     db.add(log)
 
-    de_ba_ff = await stf.get_active_effects_last_step(session.id, attacking.id, db)
-    print(de_ba_ff)
-    print("a" * 50)
+    de_ba_ff = await stf.get_active_de_buff_last_step(session.id, attacking.id, db)
     if de_ba_ff:
         """снятие баффов / дебаффов"""
         for ActEff in de_ba_ff: 
-            print("u" * 50)
-            eff = await get_effect(ActEff.effect_type_id, db)
-            if eff.affected_stat == "hp_per_turn" or eff.affected_stat == "heal":
+            eff = await stf.get_effect(ActEff.effect_type_id, db)
+            if eff.affected_stat == "hp_per_turn":
                 continue
-            print(getattr(attacking, eff.affected_stat))
             mod_value = getattr(attacking, eff.affected_stat) - ActEff.final_addition
             
             setattr(attacking, eff.affected_stat, mod_value)    
-            print(getattr(attacking, eff.affected_stat))
+   
 
     return log
 

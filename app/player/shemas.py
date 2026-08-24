@@ -130,6 +130,9 @@ class UpdateSkill(BaseModel):
     cooldown: int
     skill_type: str
     description: str
+    applies_effect_id: int
+    effect_duration: int
+    effect_chance: float
 
 
 class ReadPlayerSkill(BaseModel):
