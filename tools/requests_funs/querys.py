@@ -88,6 +88,29 @@ def get_player_info(player_id):
     return response.json()
 
 
+def get_skill_info(player_id):
+    response = requests.get(f"{API_URL}/player/skills/get?id={player_id}")
+    http_logic(response)
+
+    return response.json()
+
+def get_effect_info(eff_id):
+    response = requests.get(f"{API_URL}/fight/effect?eff_id={eff_id}")
+    http_logic(response)
+
+    return response.json()
+
+def get_active_effect_by_id(effect_id, session_id, player_id):
+    response = requests.get(f"{API_URL}/fight/active-effects_by_id?effect_id={effect_id}&session_id={session_id}&player_id={player_id}")
+
+    return response.json()
+
+def get_active_effect(session_id, player_id):
+    response = requests.get(f"{API_URL}/fight/active-effects?session_id={session_id}&player_id={player_id}")
+
+    return response.json()
+
+
 def post_login(data: dict):
     response = requests.post(f"{API_URL}/user/login", json=data)
 

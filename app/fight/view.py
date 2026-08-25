@@ -169,6 +169,20 @@ async def active_effects(session_id: int, player_id: int, db: AsyncSession = Dep
     return ListActiveEffect(effects=eff)
 
 
+@router.get("/active-effects_by_id", response_model=ListActiveEffect, tags=['effect'])
+async def active_effects_with_eff_id(effect_id: int, session_id: int, player_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(ActiveEffect)
+                              .where(
+                                  ActiveEffect.fight_session_id == session_id,
+                                  ActiveEffect.target_player_id == player_id,
+                                  ActiveEffect.effect_type_id == effect_id,
+                                  ActiveEffect.turns_remaining > 0))
+    eff = result.scalars().all()
+
+    return ListActiveEffect(effects=eff)
+
+
+
 @router.get("/active-effects-buff_debuff", response_model=ListEffects, tags=['effect'])
 async def active_effects_buff_debuff(session_id: int, player_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ActiveEffect)
@@ -242,7 +256,7 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
         attaking_id = attacker.id if session.attacker_turn else opponent.id
 
         if skill_id and not await stf.player_has_skill(attaking_id, skill_id, db):
-            raise HTTPException(status_code=404, detail="у данного игрока нет такого скила")
+            raise HTTPException(status_code=404, detail="not player with this skill")
 
         
         if skillsCooldowns:
@@ -250,7 +264,7 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
                 for skillcd in skillsCooldowns:
                     if skill_id == skillcd.skill_id and skillcd != 0:
                         # я не помню почему skillcd != 0
-                        raise HTTPException(status_code=203, detail="не прошло кд навыка")
+                        raise HTTPException(status_code=203, detail="cooldown skill")
 
 
             for cd_skill in skillsCooldowns:

@@ -63,7 +63,7 @@ def skill_menu(skills: list):
     table.add_column("Название")
     table.add_column("номер")
     table.add_column("Тип")
-    table.add_column("урон")
+    table.add_column("урон / хилл")
     table.add_column("увеличивает урон в Х раз")
     table.add_column("требует маны")
     table.add_column("откат в ходах")

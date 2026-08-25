@@ -98,7 +98,7 @@ def player_steps(steps: list, att_player: dict, def_player: dict):
     table.add_column("всего нанёс урона")
     table.add_column("описание")
 
-    for step in steps["steps"]:
+    for step in steps:
         if step["attacker_id"] == att_player["id"]:
             player = att_player
         else:
@@ -131,8 +131,90 @@ def step_last(step: dict, title: str, title_style: str, border_style: str):
         style=title_style,
         border_style=border_style
     )
+
+    console.print(panel)
     
+  
+
+
+def player_step(player, opponent, pl_cur_hp, pl_old_hp, opp_cur_hp, opp_old_hp, step, session, new_session, style):
+
+    act = ""
+    title = f"{player["nickname"]} \nHp: {pl_cur_hp}/{player["max_hp"]}\n \nАктивные эффекты: \n"
+    skill_id = step["skill_id"]
+    if skill_id:
+        skill = qu.get_skill_info(skill_id)
     
+
+    act_effects = qu.get_active_effect(session["id"], player["id"])["effects"]
+
+    stats = {
+        "hp_per_turn": "hp/ход",
+        "attack": "атаки",
+        "agility": "ловкости",
+        "defense": "защиты",
+    }
+    print(act_effects)
+    if act_effects:
+        for act_eff in act_effects:
+            eff_type = qu.get_effect_info(act_eff["effect_type_id"])
+            
+            color = "green" if eff_type["type"]  == "buff" else "red" 
+            
+            eff = f"[{color}]{eff_type["name"]}[/{color}]   "
+            eff += "+" if eff_type["type"]  == "buff" else " "
+            eff += str(eff_type["modifier_value"])
+            eff += "% " if eff_type["modifier_type"] == "percent" else " "
+            eff += f"{stats[eff_type["affected_stat"]]}   ({act_eff["turns_remaining"]})\n"
+            
+            title += eff
+
+    title += "\n"
+    match step["action_type"]:
+        case "attack":
+            act = f"Вы нанесли {step["damage_dealt"]} урона понизив хп противника с {opp_old_hp} до {opp_cur_hp}" 
+        case "skill":
+            
+
+            if skill["applies_effect_id"]:
+                effect = qu.get_effect_info(skill["applies_effect_id"])
+
+
+            match skill["skill_type"]:
+                case "damage":
+                    # TODO тут криво отображается олд хп  Вы нанесли 15.0 урона понизив хп противника с 66.0 до 66.0
+                    act = f"Вы нанесли навыком {skill["name"]} {step["damage"]} урона понизив хп противника с {opp_old_hp} до {opp_cur_hp}"
+                
+                case "heal":
+                     act = f"вы повысили своё здоровье с {pl_cur_hp - skill["damage"]} до {pl_cur_hp}"
+                
+                case "debuff":
+                    stat = opponent[effect["affected_stat"]]
+                    act_eff = qu.get_active_effect_by_id(skill["applies_effect_id"], session["id"], opponent["id"])["effects"]
+                    
+                    
+                    
+                    act = f"вы нанесли дебафф понижающий {effect["affected_stat"]} противника, с {stat - act_eff[-1]["final_addition"]} {stat}"
+
+                case "buff":
+                    stat = player[effect["affected_stat"]]
+                    act_eff = qu.get_active_effect_by_id(skill["applies_effect_id"], session["id"], opponent["id"])["effects"]
+                    
+                    
+                    act = f"вы нанесли бафф повышаюший вашу характеристику {effect["affected_stat"]}, с {stat - act_eff[-1]["final_addition"]} {stat}"
+            
+
+
+        case "dodge":
+            act = f"{opponent["nickname"]} увернулся от вашей атаки не получим урон ({opp_old_hp} -> {opp_cur_hp})"
+    
+    title += act
+
+    panel = Panel(
+        title,
+        expand=False
+    )
+
     console.print(panel)
 
 

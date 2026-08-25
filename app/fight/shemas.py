@@ -150,6 +150,7 @@ class ActiveEff(BaseModel):
     caster_player_id: int
     effect_type_id: int
     turns_remaining: int
+    final_addition: Optional[int] = None
     applied_at_turn: int
 
     class Config:

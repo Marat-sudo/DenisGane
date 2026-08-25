@@ -100,6 +100,15 @@ async def player_skills(id: int, db: AsyncSession = Depends(get_db)):
 
     return SkillsList(skills=_skills)
 
+@router.get("/skills/get", response_model=ChoiceSkill, tags=['skills'])
+async def get_skill(id: int, db: AsyncSession = Depends(get_db)):
+    """Возвращает скил по айди"""
+    result = await db.execute(select(SkillModel).where(SkillModel.id == id))
+    _skill = result.scalar_one_or_none()
+
+    return _skill
+
+
 @router.put("/skills/update", tags=['skills'])
 async def update_skill(id: int, data: UpdateSkill, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SkillModel).where(SkillModel.id == id)) 
