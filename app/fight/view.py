@@ -275,12 +275,20 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
         if skill_id:
             skill = await stf.get_skill_by_id(skill_id, db)
             
+            defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
+            if defen_mana < skill.mana_cost:
+                    raise HTTPException(status_code=202, detail="недостаточно маны")
+
+            if session.attacker_turn:
+                session.attacker_mana -= skill.mana_cost
+            else:
+                session.opponent_mana -= skill.mana_cost
+            
             if skill.applies_effect_id:
                 effect_max_stack = await stf.get_effect_stacks(skill.applies_effect_id, db)
-                eff_count = await stf.act_eff_id(skill.applies_effect_id, db)
-
-                if eff_count.count == effect_max_stack:
-                    raise HTTPException(status_code=203, detail="Максимальное количество стаков")
+                eff_count = await stf.act_eff_id(skill.applies_effect_id, session_id, db)
+                if len(eff_count) >= effect_max_stack:
+                    raise HTTPException(status_code=203, detail="max effect stacks")
             
 
                 

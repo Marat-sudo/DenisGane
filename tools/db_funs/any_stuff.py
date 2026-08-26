@@ -56,10 +56,11 @@ async def player_has_skill(player_id, skill_id, db):
     return has
 
 
-async def act_eff_id(eff_id: int, db:AsyncSession) -> list:
+async def act_eff_id(eff_id: int, session_id: int, db:AsyncSession) -> list:
     res = await db.execute(select(ActiveEffect)
                             .where(
-                                ActiveEffect.effect_type_id == eff_id))
+                                ActiveEffect.effect_type_id == eff_id,
+                                ActiveEffect.fight_session_id== session_id))
     
     return res.scalars().all()
 
@@ -97,20 +98,10 @@ async def skill(session, skill_id, attacking, defending, db):
     effect_applied_id = None
     log_has_dmg = True
 
-    res = await db.execute(select(SkillModel)
-                             .where(SkillModel.id == skill_id))
-    skill = res.scalar_one_or_none()
+    skill = await get_skill_by_id(skill_id, db)
     """Обработка использования скила / наложение эффекта"""
 
-    defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
     
-    if defen_mana < skill.mana_cost:
-            raise HTTPException(status_code=202, detail="недостаточно маны")
-
-    if session.attacker_turn:
-        session.attacker_mana -= skill.mana_cost
-    else:
-        session.opponent_mana -= skill.mana_cost
 
     
     spent_mana = skill.mana_cost

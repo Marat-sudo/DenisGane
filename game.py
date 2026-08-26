@@ -1,6 +1,5 @@
-import requests
 from rich import print
-from rich.table import Table
+
 
 import tools.requests_funs.querys as qu
 import tools.rich.game_menus as gm
@@ -11,17 +10,22 @@ USER_ID = None
 PLAYER_ID = None
 STEP_COLORS = {
     "крит урон": {
-        "text": "Нанесли критический урон",
+        "text": "Вы нанесли критический урон\n",
         "title": "red1",
         "border": "dark_red"
     },
     "обычный урон": {
-        "text": "Вы нанесли базовый урон",
+        "text": "Вы нанесли базовый урон\n",
+        "title": "red3",
+        "border": "red3"
+    },
+    "skill": {
+        "text": "Вы использовал скилл\n",
         "title": "red3",
         "border": "red3"
     },
     "уворот": {
-        "text": "Вы увернулись и не получили урон",
+        "text": "Противник увернулись и не получили урон\n",
         "title": "bright_cyan",
         "border": "cyan"
     }
@@ -48,6 +52,10 @@ def fight(max_mana: int, cur_mana: int, max_hp: int, cur_hp: int, skills: list):
             if choise == 2:
                 print("0 - вернуться назад")
                 sk = select_skill(skills)
+
+            if choise == 3:
+                print("0 - вернуться назад")
+                
             
             if sk and sk != 0:
                 return choise, sk
@@ -125,7 +133,7 @@ def game():
     def start_fight():
         get_user_hero()
         choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = choise_id
+        PLAYER_ID = select_player(choise_id)
 
 
         
@@ -151,13 +159,16 @@ def game():
         session = qu.get_session_info(fight_id)
 
         print(session)
+        print(PLAYER_ID)
         player = qu.get_player_info(PLAYER_ID)
 
+        skills = qu.get_player_skills(PLAYER_ID)["skills"]
         act_type, skill = fight(
             max_mana=player["max_mana"],
             cur_mana=session["attacker_mana"],
             max_hp=player["max_hp"],
-            cur_hp=session["attacker_current_hp"]    
+            cur_hp=session["attacker_current_hp"],
+            skills=skills
         )
 
         
@@ -219,6 +230,7 @@ def game():
         get_user_hero()
         choise_id = int(input("выберите своего героя из спика: "))
         PLAYER_ID = select_player(choise_id)
+        print(PLAYER_ID)
         
  
         response = qu.get_player_active_fight(PLAYER_ID)
@@ -271,35 +283,43 @@ def game():
 
             if last_step["is_critical"]:
                 step_color = STEP_COLORS["крит урон"]
+            
             elif last_step["action_type"] == "dodge":
                 step_color = STEP_COLORS["уворот"]
+
+            elif last_step["action_type"] == "skill":
+                step_color = STEP_COLORS["skill"]
             else:
                 step_color = STEP_COLORS["обычный урон"]
         
 
         ses = qu.get_session_info(fight_id)
         if ses["attacker_id"] == PLAYER_ID:
-            pl_current_hp = session["attacker_current_hp"]
-            opp_current_hp = session["opponent_current_hp"]
+            pl_current_hp = ses["attacker_current_hp"]
+            opp_current_hp = ses["opponent_current_hp"]
 
             pl = qu.get_player_info(session["attacker_id"])
             opp = qu.get_player_info(session["opponent_id"])
             
         else:
-            pl_current_hp = session["opponent_current_hp"]
-            opp_current_hp = session["attacker_current_hp"]
+            pl_current_hp = ses["opponent_current_hp"]
+            opp_current_hp = ses["attacker_current_hp"]
 
             pl = qu.get_player_info(session["opponent_id"])
             opp = qu.get_player_info(session["attacker_id"])
        
         if is_your_turn:
-            if steps:
-                pf.step_last(
-                    step=last_step,
-                    title=step_color["text"],
-                    title_style=step_color["title"],
-                    border_style=step_color["border"]
-                )
+
+            # TODO работает криво, + функционал заменён уже
+
+            # if steps:
+            #     print(last_step)
+            #     pf.step_last(
+            #         step=last_step,
+            #         title=step_color["text"],
+            #         title_style=step_color["title"],
+            #         border_style=step_color["border"]
+            #     )
             
 
 
@@ -329,29 +349,58 @@ def game():
             steps = qu.get_session_steps(fight_id)["steps"]
 
             
-            pf.player_step(player=pl, 
-                           opponent=opp, 
-                           pl_cur_hp=pl_current_hp, 
-                           pl_old_hp=player_current_hp, 
-                           opp_cur_hp=opp_current_hp, 
-                           opp_old_hp=opponent_current_hp, 
-                           step=steps[-1], 
-                           session=session, 
-                           new_session=ses, 
-                           style="")
+            if steps:
+                pf.player_step(player=pl, 
+                            opponent=opp, 
+                            pl_cur_hp=pl_current_hp, 
+                            opp_cur_hp=opp_current_hp, 
+                            opp_old_hp=opponent_current_hp, 
+                            step=steps[-1], 
+                            session=session, 
+                            style="")
         else:
             steps = qu.get_session_steps(fight_id)["steps"]
-            pf.player_step(player=pl, 
-                           opponent=opp, 
-                           pl_cur_hp=pl_current_hp, 
-                           pl_old_hp=player_current_hp, 
-                           opp_cur_hp=opp_current_hp, 
-                           opp_old_hp=opponent_current_hp, 
-                           step=steps[-1], 
-                           session=session, 
-                           new_session="", 
-                           style="")
+            if steps:
+                pf.player_step(player=pl, 
+                            opponent=opp, 
+                            pl_cur_hp=pl_current_hp, 
+                            opp_cur_hp=opp_current_hp, 
+                            opp_old_hp=opponent_current_hp, 
+                            step=steps[-1], 
+                            session=session, 
+                            style="")
             print("вы ожидайете действия врага")
+
+
+    def user_players():
+        global PLAYER_ID
+        get_user_hero()
+        choise_id = int(input("выберите своего героя из спика: "))
+        PLAYER_ID = select_player(choise_id)
+
+        response = qu.get_player_active_fight(PLAYER_ID)
+        if response.status_code != 200:
+            print("какая-то ошибка")
+            return
+        
+        data = response.json()
+        fight_id = data["id"]
+
+        ses = qu.get_session_info(fight_id)
+        if ses["attacker_id"] == PLAYER_ID:
+            pl_current_hp = ses["attacker_current_hp"]
+
+        else:
+            pl_current_hp = ses["opponent_current_hp"]
+
+
+        
+
+        pl = qu.get_player_info(PLAYER_ID)
+        
+        pf.player_info_get_print(pl, pl_current_hp, ses)
+
+        print(0)
 
 
         
@@ -370,6 +419,8 @@ def game():
             get_user_hero()
         elif choise == 2:
             create_player()
+        elif choise == 3:
+            user_players()
         elif choise == 4:
             start_fight()
         elif choise == 5:
