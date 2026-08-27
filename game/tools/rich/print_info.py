@@ -161,11 +161,27 @@ def player_act_effect(act_effects: list):
 
     return text
 
-def player_info_get_print(player, pl_cur_hp, session, get=False):
-    title = f"{player["nickname"]} \nHp: {pl_cur_hp}/{player["max_hp"]}\n"
+
+
+def player_static_field_get_print(player, cur_hp, get=False):
+    title = f"{player["nickname"]} \nHp: {cur_hp}/{player["max_hp"]}\n"
     title += f"attack: {player["attack"]}\n"
     title += f"defense: {player["defense"]}\n"
     title += f"agility: {player["agility"]}\n"
+    title += f"mana: {player["max_mana"]}\n"
+
+    if get:
+        return title
+    panel = Panel(
+        title,
+        expand=False
+    )
+
+    console.print(panel)
+
+
+def player_info_get_print(player, pl_cur_hp, session, get=False):
+    title = player_static_field_get_print(player, pl_cur_hp, True)
     title += "\nАктивные эффекты: \n"
     
     
@@ -185,6 +201,7 @@ def player_info_get_print(player, pl_cur_hp, session, get=False):
     )
 
     console.print(panel)
+    
 
 def player_step(player, opponent, pl_cur_hp, opp_cur_hp, opp_old_hp, step, session, style):
 

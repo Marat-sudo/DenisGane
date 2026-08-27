@@ -94,6 +94,8 @@ async def player_avtive_fight(id: int, db: AsyncSession = Depends(get_db)):
                                     FightSession.status == "active"))
     fight = result.scalar_one_or_none()
 
+    if not fight:
+        raise HTTPException(status_code=203, detail="Player hasn't active fight")
     return fight
 
 

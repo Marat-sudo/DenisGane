@@ -6,7 +6,8 @@ import tools.rich.print_info as pf
 class GameApp:
     def __init__(self, user_id):
         self.USER_ID = user_id
-        self.PLAYER_ID = self.select_player_id()
+        self.PLAYER_ID = None
+        self.select_player_id()
 
         self.player_fight_id = None
         self.player_current_hp = None
@@ -14,17 +15,17 @@ class GameApp:
 
         self.STEP_COLORS = {
             "крит урон": {
-                "text": "Вы нанесли критический урон\n",
+                "text": "Вам нанесли критический урон\n",
                 "title": "red1",
                 "border": "dark_red"
             },
             "обычный урон": {
-                "text": "Вы нанесли базовый урон\n",
+                "text": "Вам нанесли базовый урон\n",
                 "title": "red3",
                 "border": "red3"
             },
             "skill": {
-                "text": "Вы использовал скилл\n",
+                "text": "Противник использовал скилл\n",
                 "title": "red3",
                 "border": "red3"
             },
@@ -233,21 +234,7 @@ class GameApp:
                 step_color = self.STEP_COLORS["обычный урон"]
         
 
-        ses = qu.get_session_info(fight_id)
-        if ses["attacker_id"] == self.PLAYER_ID:
-            pl_current_hp = ses["attacker_current_hp"]
-            opp_current_hp = ses["opponent_current_hp"]
-
-            pl = qu.get_player_info(session["attacker_id"])
-            opp = qu.get_player_info(session["opponent_id"])
-            
-        else:
-            pl_current_hp = ses["opponent_current_hp"]
-            opp_current_hp = ses["attacker_current_hp"]
-
-            pl = qu.get_player_info(session["opponent_id"])
-            opp = qu.get_player_info(session["attacker_id"])
-       
+        
         if is_your_turn:
             if steps:
                 print(last_step)
@@ -280,7 +267,21 @@ class GameApp:
             if ses["status"] == "finish":
                 pass
 
-           
+            ses = qu.get_session_info(fight_id)
+            if ses["attacker_id"] == self.PLAYER_ID:
+                pl_current_hp = ses["attacker_current_hp"]
+                opp_current_hp = ses["opponent_current_hp"]
+
+                pl = qu.get_player_info(session["attacker_id"])
+                opp = qu.get_player_info(session["opponent_id"])
+                
+            else:
+                pl_current_hp = ses["opponent_current_hp"]
+                opp_current_hp = ses["attacker_current_hp"]
+
+                pl = qu.get_player_info(session["opponent_id"])
+                opp = qu.get_player_info(session["attacker_id"])
+        
 
 
             steps = qu.get_session_steps(fight_id)["steps"]
@@ -296,6 +297,21 @@ class GameApp:
                             session=session, 
                             style="")
         else:
+            ses = qu.get_session_info(fight_id)
+            if ses["attacker_id"] == self.PLAYER_ID:
+                pl_current_hp = ses["attacker_current_hp"]
+                opp_current_hp = ses["opponent_current_hp"]
+
+                pl = qu.get_player_info(session["attacker_id"])
+                opp = qu.get_player_info(session["opponent_id"])
+                
+            else:
+                pl_current_hp = ses["opponent_current_hp"]
+                opp_current_hp = ses["attacker_current_hp"]
+
+                pl = qu.get_player_info(session["opponent_id"])
+                opp = qu.get_player_info(session["attacker_id"])
+
             steps = qu.get_session_steps(fight_id)["steps"]
             if steps:
                 pf.player_step(player=pl, 
@@ -311,8 +327,13 @@ class GameApp:
 
     def user_players(self):
         response = qu.get_player_active_fight(self.PLAYER_ID)
-        if response.status_code != 200:
+        pl = qu.get_player_info(self.PLAYER_ID)
+        if response.status_code > 299:
             print("какая-то ошибка")
+            return
+        
+        elif response.status_code == 203:
+            pf.player_static_field_get_print(pl, pl["max_hp"])
             return
         
         data = response.json()
@@ -325,15 +346,10 @@ class GameApp:
         else:
             pl_current_hp = ses["opponent_current_hp"]
 
-
-        
-
-        pl = qu.get_player_info(self.PLAYER_ID)
         
         pf.player_info_get_print(pl, pl_current_hp, ses)
 
-        print(0)
-
+       
 
     def fight(self, max_mana: int, cur_mana: int, max_hp: int, cur_hp: int, skills: list):
         while True:
