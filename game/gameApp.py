@@ -1,44 +1,57 @@
-from rich import print
-
 
 import tools.requests_funs.querys as qu
 import tools.rich.game_menus as gm
 import tools.rich.print_info as pf
 
-API_URL = "http://127.0.0.1:8000"
-USER_ID = None
-PLAYER_ID = None
-STEP_COLORS = {
-    "крит урон": {
-        "text": "Вам нанесли критический урон\n",
-        "title": "red1",
-        "border": "dark_red"
-    },
-    "обычный урон": {
-        "text": "Вам нанесли базовый урон\n",
-        "title": "red3",
-        "border": "red3"
-    },
-    "skill": {
-        "text": "Противник использовал скилл\n",
-        "title": "red3",
-        "border": "red3"
-    },
-    "уворот": {
-        "text": "Вы увернулись и не получили урон\n",
-        "title": "bright_cyan",
-        "border": "cyan"
-    }
-}
+class GameApp:
+    def __init__(self, user_id):
+        self.USER_ID = user_id
+        self.PLAYER_ID = self.select_player_id()
+
+        self.player_fight_id = None
+        self.player_current_hp = None
+        self.player_current_mana = None
+
+        self.STEP_COLORS = {
+            "крит урон": {
+                "text": "Вы нанесли критический урон\n",
+                "title": "red1",
+                "border": "dark_red"
+            },
+            "обычный урон": {
+                "text": "Вы нанесли базовый урон\n",
+                "title": "red3",
+                "border": "red3"
+            },
+            "skill": {
+                "text": "Вы использовал скилл\n",
+                "title": "red3",
+                "border": "red3"
+            },
+            "уворот": {
+                "text": "Противник увернулись и не получили урон\n",
+                "title": "bright_cyan",
+                "border": "cyan"
+            }
+        }
 
 
+    def select_player_id(self):
+        self.get_user_hero()
+        choise_id = int(input("выберите своего героя из спика: "))
+
+        data = qu.get_user_info(self.USER_ID)
+        players = data["players"]
+
+        while choise_id -1 >= len(players) or choise_id < 0:
+            print("неверный ввод")
+            choise_id = int(input("выберите своего героя из спика: "))
+            
+        self.PLAYER_ID = players[choise_id -1]["id"]
 
 
-def game():
-    global USER_ID 
-    
-    def get_user_hero():
-        data = qu.get_user_info(USER_ID)
+    def get_user_hero(self):
+        data = qu.get_user_info(self.USER_ID)
 
         players = data["players"]
 
@@ -49,18 +62,9 @@ def game():
         else:
             print("Нет персонажей")
 
-
-    def select_player(player_id: int):
-        data = qu.get_user_info(USER_ID)
-
-        players = data["players"]
-    
-        if player_id -1 >= len(players) or player_id < 0:
-            return -1 
         
-        return players[player_id -1]["id"]
 
-    def create_player():
+    def create_player(self):
         data = qu.get_heroes()
         heroes = data["heroes"]
         
@@ -73,7 +77,7 @@ def game():
         data = {
             "nickname" : nickname,
             "hero_id" : hero_id,
-            "user_id" : USER_ID
+            "user_id" : self.USER_ID
         }
 
         response = qu.post_create_player(data)
@@ -82,13 +86,7 @@ def game():
 
 
     
-    def start_fight():
-        get_user_hero()
-        choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = select_player(choise_id)
-
-
-        
+    def start_fight(self):
         data = qu.get_locations()
 
         pf.all_locations(data["locations"])
@@ -96,12 +94,12 @@ def game():
         choise_loc = int(input("введите номер локации, 0 - остаться на прежней\nвыберите локацию: "))
 
         if choise_loc != 0:
-            qu.put_update_player_loc(PLAYER_ID, choise_loc)
+            qu.put_update_player_loc(self.PLAYER_ID, choise_loc)
         
-        qu.post_start_fight(PLAYER_ID)
+        qu.post_start_fight(self.PLAYER_ID)
 
 
-        response = qu.get_player_active_fight(PLAYER_ID)
+        response = qu.get_player_active_fight(self.PLAYER_ID)
         if response.status_code != 200:
             print("какая-то ошибка")
             return
@@ -110,12 +108,11 @@ def game():
         fight_id = data["id"]
         session = qu.get_session_info(fight_id)
 
-        print(session)
-        print(PLAYER_ID)
-        player = qu.get_player_info(PLAYER_ID)
 
-        skills = qu.get_player_skills(PLAYER_ID)["skills"]
-        act_type, skill = fight(
+        player = qu.get_player_info(self.PLAYER_ID)
+
+        skills = qu.get_player_skills(self.PLAYER_ID)["skills"]
+        act_type, skill = self.fight(
             max_mana=player["max_mana"],
             cur_mana=session["attacker_mana"],
             max_hp=player["max_hp"],
@@ -140,7 +137,7 @@ def game():
         #     print("вы уже находитесь в бою")
         #     return
 
-        # if data["detail"]["winner"]["id"] == PLAYER_ID:
+        # if data["detail"]["winner"]["id"] == self.PLAYER_ID:
         #     title = "[green][bold]Выигрыш[/bold][/green]"
         #     color = "green"
         # else:
@@ -158,13 +155,9 @@ def game():
         # print(res)
         
 
-    def user_statistics():
-        get_user_hero()
-        choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = select_player(choise_id)
-
+    def user_statistics(self):
         
-        res = qu.get_player_fight_history(PLAYER_ID)
+        res = qu.get_player_fight_history(self.PLAYER_ID)
         
         data = res["fights"]
 
@@ -173,19 +166,14 @@ def game():
             print("нет статистики")
             return
 
-        pf.user_statistics(data, PLAYER_ID)
+        pf.user_statistics(data, self.PLAYER_ID)
 
 
-    def fight_step():
+    def fight_step(self):
         """отображает все ходы текущей битвы"""
-        global PLAYER_ID
-        get_user_hero()
-        choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = select_player(choise_id)
-        print(PLAYER_ID)
         
  
-        response = qu.get_player_active_fight(PLAYER_ID)
+        response = qu.get_player_active_fight(self.PLAYER_ID)
         if response.status_code != 200:
             print("нет активных боёв")
             return
@@ -210,7 +198,7 @@ def game():
         pf.player_steps(steps, att_player, def_player)
         
         
-        if session["attacker_id"] == PLAYER_ID:
+        if session["attacker_id"] == self.PLAYER_ID:
             player_total_mana = att_player["max_mana"]
             player_current_mana = session["attacker_mana"]
             player_total_hp = att_player["max_hp"]
@@ -226,27 +214,27 @@ def game():
             player_current_hp = session["opponent_current_hp"]
             opponent_current_hp = session["attacker_current_hp"]
 
-        is_your_turn = (session["attacker_turn"] and session["attacker_id"] == PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == PLAYER_ID)
+        is_your_turn = (session["attacker_turn"] and session["attacker_id"] == self.PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == self.PLAYER_ID)
         
-        skills = qu.get_player_skills(PLAYER_ID)["skills"]
+        skills = qu.get_player_skills(self.PLAYER_ID)["skills"]
         
         if steps:
-            last_step = steps[-2]
+            last_step = steps[-1]
 
             if last_step["is_critical"]:
-                step_color = STEP_COLORS["крит урон"]
+                step_color = self.STEP_COLORS["крит урон"]
             
             elif last_step["action_type"] == "dodge":
-                step_color = STEP_COLORS["уворот"]
+                step_color = self.STEP_COLORS["уворот"]
 
             elif last_step["action_type"] == "skill":
-                step_color = STEP_COLORS["skill"]
+                step_color = self.STEP_COLORS["skill"]
             else:
-                step_color = STEP_COLORS["обычный урон"]
+                step_color = self.STEP_COLORS["обычный урон"]
         
 
         ses = qu.get_session_info(fight_id)
-        if ses["attacker_id"] == PLAYER_ID:
+        if ses["attacker_id"] == self.PLAYER_ID:
             pl_current_hp = ses["attacker_current_hp"]
             opp_current_hp = ses["opponent_current_hp"]
 
@@ -261,9 +249,6 @@ def game():
             opp = qu.get_player_info(session["attacker_id"])
        
         if is_your_turn:
-
-            # TODO работает криво, + функционал заменён уже
-
             if steps:
                 print(last_step)
                 pf.step_last(
@@ -276,7 +261,7 @@ def game():
 
 
             print("")
-            act_type, skill = fight(
+            act_type, skill = self.fight(
                 max_mana=player_total_mana,
                 cur_mana=player_current_mana,
                 max_hp=player_total_hp,
@@ -324,13 +309,8 @@ def game():
             print("вы ожидайете действия врага")
 
 
-    def user_players():
-        global PLAYER_ID
-        get_user_hero()
-        choise_id = int(input("выберите своего героя из спика: "))
-        PLAYER_ID = select_player(choise_id)
-
-        response = qu.get_player_active_fight(PLAYER_ID)
+    def user_players(self):
+        response = qu.get_player_active_fight(self.PLAYER_ID)
         if response.status_code != 200:
             print("какая-то ошибка")
             return
@@ -339,7 +319,7 @@ def game():
         fight_id = data["id"]
 
         ses = qu.get_session_info(fight_id)
-        if ses["attacker_id"] == PLAYER_ID:
+        if ses["attacker_id"] == self.PLAYER_ID:
             pl_current_hp = ses["attacker_current_hp"]
 
         else:
@@ -348,89 +328,90 @@ def game():
 
         
 
-        pl = qu.get_player_info(PLAYER_ID)
+        pl = qu.get_player_info(self.PLAYER_ID)
         
         pf.player_info_get_print(pl, pl_current_hp, ses)
 
         print(0)
 
 
-        
-    while True:
-        text = """
-        1. Просмотр персонажей;
-        2. Создать персонажей;
-        3. Мой профиль
-        4. отправитсья в бой
-        5. статистика
-        6. состояние битвы
-        0. Выйти.
-        """
-        choise = int(input(f"{text}\n Выбор: "))
-        if choise == 1:
-            get_user_hero()
-        elif choise == 2:
-            create_player()
-        elif choise == 3:
-            user_players()
-        elif choise == 4:
-            start_fight()
-        elif choise == 5:
-            user_statistics()
-        elif choise == 6:
-            fight_step()
+    def fight(self, max_mana: int, cur_mana: int, max_hp: int, cur_hp: int, skills: list):
+        while True:
+            gm.fight_menu(
+                    max_mana,
+                    cur_mana,
+                    max_hp,
+                    cur_hp
+                )
+
+            choise = int(input("действие: "))
+            
+            if choise not in (1, 2):
+                print("неверный ввод")
+                continue
+            
+            if choise == 1:
+                break
+
+            if choise == 2:
+                print("0 - вернуться назад")
+                sk = self.select_skill(skills)
+
+            if choise == 3:
+                print("0 - вернуться назад")
+                
+            
+            if sk and sk != 0:
+                return choise, sk
 
 
-
-def login():
-    global USER_ID
-    username = input("введите usenname: ").strip()
-    password = input("введите password: ").strip()
+        return choise, None
 
 
-    
-    response = qu.post_login(data={"username": username, "password": password}) 
-    if (response.status_code == 200):
-        data = response.json()
-        USER_ID = data["id"]
-       
-        game()
+    def select_skill(self, skills: list):
+        while True:
+            gm.skill_menu(
+                    skills
+                )
 
-    else:
-        print(response.content)
-    
+            choise = int(input("действие: "))
+                
+            if choise > len(skills) or choise < 0:
+                print("неверный ввод")
+                continue
 
-def register():
-    global USER_ID
-    username = input("Введите имя: ").strip()
-    password = input("Введите пароль: ").strip()
-    data = {"username": username, "password": password}
+            if choise != 0 :
+                return skills[choise - 1]["id"]
+                
+            return None
 
-    response = qu.post_register(data)
-    print(response.content)
 
-    if (response.status_code == 201):
-        data = response.json()
-        USER_ID = data["id"]
-        
-        game()
-    else:
-        print("Error")
-
-while True:
-    text =  """
-            1. войти по nickname
-            2. Регистрация
-            0. выйти
+    def start(self):       
+        while True:
+            text = """
+            1. Просмотр персонажей;
+            2. Смена игрока
+            3. Создать персонажей;
+            4. Мой профиль
+            5. отправитсья в бой
+            6. статистика
+            7. состояние битвы
+            0. Выйти.
             """
-    
-    choise = int(input(text))
-
-    if (choise == 1):
-        login()
-    
-    elif (choise == 2):
-        register()
-
-    elif (choise == 0):
-        exit()
+            choise = int(input(f"{text}\n Выбор: "))
+            
+            match choise:
+                case 1:
+                    self.get_user_hero()
+                case 2:
+                    self.select_player_id()
+                case 3:
+                    self.create_player()
+                case 4:
+                    self.user_players()
+                case 5:
+                    self.start_fight()
+                case 6:
+                    self.user_statistics()
+                case 7:
+                    self.fight_step()
