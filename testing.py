@@ -1,4 +1,4 @@
-import tools.rich.game_menus as gm
+import game.tools.rich.game_menus as gm
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
