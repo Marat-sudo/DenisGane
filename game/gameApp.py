@@ -183,11 +183,6 @@ class GameApp:
 
         
         steps = qu.get_session_steps(fight_id)["steps"]
-
-       
-        
-        
-
         session = qu.get_session_info(fight_id)
 
         att_player = qu.get_player_info(session["attacker_id"])
@@ -198,22 +193,22 @@ class GameApp:
         
         pf.player_steps(steps, att_player, def_player)
         
-        
+
         if session["attacker_id"] == self.PLAYER_ID:
-            player_total_mana = att_player["max_mana"]
-            player_current_mana = session["attacker_mana"]
-            player_total_hp = att_player["max_hp"]
-
-            player_current_hp = session["attacker_current_hp"]
-            opponent_current_hp = session["opponent_current_hp"]
-
+            player = att_player
+            opponent = def_player
         else:
-            player_total_mana = def_player["max_mana"]
-            player_current_mana = session["opponent_mana"]
-            player_total_hp = def_player["max_hp"]
+            player = def_player
+            opponent = att_player
+    
+    
+        player_total_mana = player["max_mana"]
+        player_current_mana = player["mana"]
+        player_total_hp = player["max_hp"]
 
-            player_current_hp = session["opponent_current_hp"]
-            opponent_current_hp = session["attacker_current_hp"]
+        player_current_hp = player["hp"]
+        opponent_current_hp = opponent["hp"]
+
 
         is_your_turn = (session["attacker_turn"] and session["attacker_id"] == self.PLAYER_ID) or (not session["attacker_turn"] and session["opponent_id"] == self.PLAYER_ID)
         
@@ -230,6 +225,7 @@ class GameApp:
 
             elif last_step["action_type"] == "skill":
                 step_color = self.STEP_COLORS["skill"]
+
             else:
                 step_color = self.STEP_COLORS["обычный урон"]
         
@@ -267,29 +263,17 @@ class GameApp:
             if ses["status"] == "finish":
                 pass
 
-            ses = qu.get_session_info(fight_id)
-            if ses["attacker_id"] == self.PLAYER_ID:
-                pl_current_hp = ses["attacker_current_hp"]
-                opp_current_hp = ses["opponent_current_hp"]
+            pl_current_hp = player.hp
+            opp_current_hp = opponent.hp
 
-                pl = qu.get_player_info(session["attacker_id"])
-                opp = qu.get_player_info(session["opponent_id"])
-                
-            else:
-                pl_current_hp = ses["opponent_current_hp"]
-                opp_current_hp = ses["attacker_current_hp"]
-
-                pl = qu.get_player_info(session["opponent_id"])
-                opp = qu.get_player_info(session["attacker_id"])
-        
-
+    
 
             steps = qu.get_session_steps(fight_id)["steps"]
 
             
             if steps:
-                pf.player_step(player=pl, 
-                            opponent=opp, 
+                pf.player_step(player=player, 
+                            opponent=opponent, 
                             pl_cur_hp=pl_current_hp, 
                             opp_cur_hp=opp_current_hp, 
                             opp_old_hp=opponent_current_hp, 
@@ -297,25 +281,14 @@ class GameApp:
                             session=session, 
                             style="")
         else:
-            ses = qu.get_session_info(fight_id)
-            if ses["attacker_id"] == self.PLAYER_ID:
-                pl_current_hp = ses["attacker_current_hp"]
-                opp_current_hp = ses["opponent_current_hp"]
+            pl_current_hp = player.hp
+            opp_current_hp = opponent.hp
 
-                pl = qu.get_player_info(session["attacker_id"])
-                opp = qu.get_player_info(session["opponent_id"])
-                
-            else:
-                pl_current_hp = ses["opponent_current_hp"]
-                opp_current_hp = ses["attacker_current_hp"]
-
-                pl = qu.get_player_info(session["opponent_id"])
-                opp = qu.get_player_info(session["attacker_id"])
 
             steps = qu.get_session_steps(fight_id)["steps"]
             if steps:
-                pf.player_step(player=pl, 
-                            opponent=opp, 
+                pf.player_step(player=player, 
+                            opponent=opponent, 
                             pl_cur_hp=pl_current_hp, 
                             opp_cur_hp=opp_current_hp, 
                             opp_old_hp=opponent_current_hp, 
@@ -340,14 +313,10 @@ class GameApp:
         fight_id = data["id"]
 
         ses = qu.get_session_info(fight_id)
-        if ses["attacker_id"] == self.PLAYER_ID:
-            pl_current_hp = ses["attacker_current_hp"]
-
-        else:
-            pl_current_hp = ses["opponent_current_hp"]
+        # TODO тут доделать
 
         
-        pf.player_info_get_print(pl, pl_current_hp, ses)
+        pf.player_info_get_print(pl, pl["hp"], ses)
 
        
 

@@ -59,11 +59,7 @@ async def start_fight(attacker_id: int, db: AsyncSession = Depends(get_db)):
  
     session = FightSession(
         attacker_id = attacker.id,
-        opponent_id = opponent.id,
-        attacker_current_hp = attacker.max_hp,
-        opponent_current_hp = opponent.max_hp,
-        attacker_mana = attacker.mana,
-        opponent_mana = opponent.mana
+        opponent_id = opponent.id
     )
 
 
@@ -422,10 +418,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
 
 
             if eff.affected_stat == "hp_per_turn":
-                if session.attacker_turn:
-                    session.attacker_current_hp = min(session.attacker_current_hp + mod_value, attacking.max_hp)
-                else:        
-                    session.opponent_current_hp = min(session.opponent_current_hp + mod_value, attacking.max_hp)
+                attacking.hp = min(attacking.hp + mod_value, attacking.max_hp)
                 effect_damage += eff.modifier_value 
 
 
@@ -437,14 +430,12 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
     skill_dmg = skill_id and (skill.skill_type == "buff" or skill.skill_type == "heal")
     if dodge_chance > random.randint(0, 100) and not skill_dmg:
         """проверка на уклонение и создание лога"""
+        ahp = attacking.hp
+        dhp = defending.hp
         if session.attacker_turn:
-            ahp = session.attacker_current_hp
-            dhp = session.opponent_current_hp
             session.attacker_combo=0
         
         else:
-            ahp = session.opponent_current_hp
-            dhp = session.attacker_current_hp
             session.opponent_combo=0
 
         log = await stf.createLog(
@@ -541,21 +532,17 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         damage += damage * (session.opponent_combo - 2) * 0.1
     
 
-    defend_hp = session.opponent_current_hp if session.attacker_turn else session.attacker_current_hp
     if log_has_dmg:
         damage = round(damage, 1) 
-        newHP = defend_hp - damage 
+        newHP = defending.hp - damage 
         newHP = round(newHP, 1)
     else:
-        newHP = defend_hp
+        newHP = defending.h
 
 
     if newHP <= 0:
         # TODO сделать снятие де/баффов при выйгрыше
-        if session.attacker_turn:
-            session.opponent_current_hp = 0.0
-        else:
-            session.attacker_current_hp = 0.0
+        defending.hp = 0
         
         session.status = "finish"
         session.winner_id = attacking.id
@@ -579,19 +566,17 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                 
                 setattr(attacking, eff.affected_stat, mod_value)    
         
-    if session.attacker_turn:
-        session.opponent_current_hp = newHP
-        att_hp = session.attacker_current_hp
         
+
+    defending.hp = newHP
+    att_hp = attacking.hp
+    if session.attacker_turn:
         session.attacker_combo += 1
         comdo = session.attacker_combo
         if session.attacker_combo > session.attacker_max_combo:
             session.attacker_max_combo = session.attacker_combo
 
     else:
-        session.attacker_current_hp = newHP
-        att_hp = session.opponent_current_hp
-        
         session.opponent_combo += 1
         comdo = session.opponent_combo
         if session.opponent_combo > session.opponent_max_combo:

@@ -18,12 +18,13 @@ class PlayerModel(Base):
     created_at: Mapped[datetime] = mapped_column(default=datetime.now)
     locations_id:Mapped[int] = mapped_column(ForeignKey("locations.id"),nullable=False)
 
-    mana: Mapped[int] = mapped_column(nullable=False)
-    max_mana: Mapped[int] = mapped_column(nullable=False)
-    max_hp: Mapped[int] = mapped_column(nullable=False)
-    attack: Mapped[int] = mapped_column(nullable=False)
-    defense: Mapped[int] = mapped_column(nullable=False)
-    agility: Mapped[int] = mapped_column(nullable=False)
+    mana: Mapped[int] 
+    max_mana: Mapped[int]
+    hp: Mapped[float]
+    max_hp: Mapped[int] 
+    attack: Mapped[int] 
+    defense: Mapped[int] 
+    agility: Mapped[int] 
     crit_chance: Mapped[float]
     crit_multiplier: Mapped[float]
     
@@ -40,11 +41,11 @@ class HeroModel(Base):
 
     name: Mapped[str]
 
-    base_hp: Mapped[int] = mapped_column(nullable=False)
-    base_attack: Mapped[int] = mapped_column(nullable=False)
-    base_defense: Mapped[int] = mapped_column(nullable=False)
-    base_agility: Mapped[int] = mapped_column(nullable=False)
-    base_mana: Mapped[int] = mapped_column(nullable=False)
+    base_hp: Mapped[int] 
+    base_attack: Mapped[int] 
+    base_defense: Mapped[int] 
+    base_agility: Mapped[int] 
+    base_mana: Mapped[int] 
     
 
     skills: Mapped[List["SkillModel"]] = relationship("SkillModel", back_populates="hero")
