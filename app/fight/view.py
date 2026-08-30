@@ -273,14 +273,14 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
         if skill_id:
             skill = await stf.get_skill_by_id(skill_id, db)
             
-            defen_mana = session.attacker_mana if session.attacker_turn else session.opponent_mana
+            defen_mana = attacker.mana if session.attacker_turn else opponent.mana
             if defen_mana < skill.mana_cost:
                     raise HTTPException(status_code=202, detail="недостаточно маны")
 
             if session.attacker_turn:
-                session.attacker_mana -= skill.mana_cost
+                attacker.mana  -= skill.mana_cost
             else:
-                session.opponent_mana -= skill.mana_cost
+                opponent.mana -= skill.mana_cost
             
             if skill.applies_effect_id:
                 effect_max_stack = await stf.get_effect_stacks(skill.applies_effect_id, db)
@@ -291,11 +291,7 @@ async def fights_turn(session_id: int, skill_id: int = None, db: AsyncSession = 
 
                 
 
-        # ... получение opponent, attacker и cooldowns ...
-
-        # УБЕРИТЕ промежуточные `await db.commit()` внутри функций step/fight_players!
-        # Выполняйте только добавление/обновление объектов через db.add() или изменение полей.
-
+    
         log = await step(
             session=session, 
             opponent=opponent, 
@@ -537,7 +533,7 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
         newHP = defending.hp - damage 
         newHP = round(newHP, 1)
     else:
-        newHP = defending.h
+        newHP = defending.hp
 
 
     if newHP <= 0:

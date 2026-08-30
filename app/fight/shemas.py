@@ -102,10 +102,6 @@ class ReadSession(BaseModel):
     id: int
     attacker_id: int
     opponent_id: int
-    attacker_current_hp: float
-    opponent_current_hp: float
-    attacker_mana: int
-    opponent_mana: int
 
     winner_id: Optional[int] = None
 

@@ -115,9 +115,9 @@ class GameApp:
         skills = qu.get_player_skills(self.PLAYER_ID)["skills"]
         act_type, skill = self.fight(
             max_mana=player["max_mana"],
-            cur_mana=session["attacker_mana"],
+            cur_mana=player["mana"],
             max_hp=player["max_hp"],
-            cur_hp=session["attacker_current_hp"],
+            cur_hp=player["hp"],
             skills=skills
         )
 
@@ -233,7 +233,6 @@ class GameApp:
         
         if is_your_turn:
             if steps:
-                print(last_step)
                 pf.step_last(
                     step=last_step,
                     title=step_color["text"],
@@ -263,8 +262,8 @@ class GameApp:
             if ses["status"] == "finish":
                 pass
 
-            pl_current_hp = player.hp
-            opp_current_hp = opponent.hp
+            pl_current_hp = player["hp"]
+            opp_current_hp = opponent["hp"]
 
     
 

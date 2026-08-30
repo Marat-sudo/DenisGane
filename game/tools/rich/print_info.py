@@ -206,8 +206,6 @@ def player_info_get_print(player, pl_cur_hp, session, get=False):
 def player_step(player, opponent, pl_cur_hp, opp_cur_hp, opp_old_hp, step, session, style):
 
     title = player_info_get_print(player, pl_cur_hp, session, True)
-
-
     title += "\n"
     match step["action_type"]:
         case "attack":

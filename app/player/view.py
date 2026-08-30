@@ -160,6 +160,7 @@ async def register_Player(data: Player, db: AsyncSession = Depends(get_db)):
         hero_id=data.hero_id, 
         user_id=data.user_id,
         locations_id = loc.id,
+        hp = hero.base_hp,
         max_hp = hero.base_hp,
         attack = hero.base_attack,
         defense = hero.base_defense,

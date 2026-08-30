@@ -93,6 +93,7 @@ class ReadPlayer(Player):
     level: int
     exp: int
     mana: int
+    hp: float
     max_mana: int
     max_hp: int
     attack: int
