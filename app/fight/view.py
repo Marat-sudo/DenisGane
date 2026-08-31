@@ -550,6 +550,12 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
             )
 
         db.add(win)
+
+        attacking.hp = attacking.max_hp
+        defending.hp = defending.max_hp
+
+        attacking.mana = attacking.max_mana
+        defending.mana = defending.max_mana
         
         de_ba_ff = await stf.get_active_de_buff(session.id, attacking.id, db)
         if de_ba_ff:
@@ -563,8 +569,9 @@ async def fight_players(attacking, defending, session, db, skill_id=None):
                 setattr(attacking, eff.affected_stat, mod_value)    
         
         
-
-    defending.hp = newHP
+    else:
+        defending.hp = newHP
+    
     att_hp = attacking.hp
     if session.attacker_turn:
         session.attacker_combo += 1
